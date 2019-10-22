@@ -7,7 +7,6 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 import android.os.Message;
-import android.support.v7.app.AppCompatActivity;
 import android.content.DialogInterface;
 import android.util.Log;
 import android.widget.Toast;
@@ -21,15 +20,16 @@ import java.util.Set;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.sql.DriverManager.println;
 /**
  * Created by Rodrigo Favarete, Mad Forest Games' Lead Game Developer, on September 8, 2017
  */
 
 public class GodotBluetooth extends Godot.SingletonBase 
 {   
-    protected Activity activity; 
+    protected Activity activity = null; 
 
-    private boolean initialized;
+    private boolean initialized = false;
     private boolean pairedDevicesListed = false;
     boolean connected = false;
     boolean bluetoothRequired = true;
@@ -68,12 +68,13 @@ public class GodotBluetooth extends Godot.SingletonBase
                 public void run() {
                     localBluetooth = BluetoothAdapter.getDefaultAdapter();
                     if(localBluetooth == null) {
-                        Toast.makeText(activity, "ERROR: Bluetooth Adapter not found!", Toast.LENGTH_LONG).show();
+                        println( "ERROR: Bluetooth Adapter not found!");
                         activity.finish();
                     }
                     else if (!localBluetooth.isEnabled()){
                         Intent enableBluetoothIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                         activity.startActivityForResult(enableBluetoothIntent, REQUEST_ENABLE_BT);
+                        println("Asked For BLUETOOTH");
                     }
                     instanceId = newInstanceId;
                     bluetoothRequired = newBluetoothRequired;
@@ -121,11 +122,11 @@ public class GodotBluetooth extends Godot.SingletonBase
                                 socket.close();
                                 connected = false;
                                 pairedDevicesListed = false;
-                                Toast.makeText(activity, "Bluetooth Disconnected!", Toast.LENGTH_LONG).show();
+                                println( "Bluetooth Disconnected!");
                                 GodotLib.calldeferred(instanceId, "_on_disconnected", new Object[]{});
                             }
                             catch (IOException e) {
-                                Toast.makeText(activity, "ERROR: \n" + e, Toast.LENGTH_LONG).show();
+                                println( "ERROR: \n" + e);
                             }
                     }
                     else{
@@ -141,7 +142,7 @@ public class GodotBluetooth extends Godot.SingletonBase
         }
 
         else {
-            Toast.makeText(activity, "ERROR: Module Wasn't Initialized!", Toast.LENGTH_LONG).show();
+            println( "ERROR: Module Wasn't Initialized!");
         }
     }
 
@@ -232,17 +233,17 @@ public class GodotBluetooth extends Godot.SingletonBase
                                 socket.close();
                                 connected = false;
                                 pairedDevicesListed = false;
-                                Toast.makeText(activity, "Bluetooth Disconnected!", Toast.LENGTH_LONG).show();
+                                println( "Bluetooth Disconnected!");
                             }
                             catch (IOException e) {
-                                Toast.makeText(activity, "ERROR: \n" + e, Toast.LENGTH_LONG).show();
+                                println( "ERROR: \n" + e);
                             }
                         }
                     }
             });
         }
         else {
-            Toast.makeText(activity, "ERROR: Module Wasn't Initialized!", Toast.LENGTH_LONG).show();
+            println( "ERROR: Module Wasn't Initialized!");
         }
     }
 
@@ -262,14 +263,14 @@ public class GodotBluetooth extends Godot.SingletonBase
             cThread = new ConnectedThread(socket);
             cThread.start();
             GodotLib.calldeferred(instanceId, "_on_connected", new Object[]{ remoteBluetoothName, macAdress });
-            Toast.makeText(activity, "Connected With " + remoteBluetoothName, Toast.LENGTH_LONG).show();
+            println( "Connected With " + remoteBluetoothName);
             }
 
         catch (IOException e) {
             pairedDevicesListed = false;
             connected = false;
             GodotLib.calldeferred(instanceId, "_on_connected_error", new Object[]{ });
-            Toast.makeText(activity, "ERROR: Cannot connect to " + MAC, Toast.LENGTH_LONG).show();
+            println( "ERROR: Cannot connect to " + MAC);
         }
     }
 
@@ -287,7 +288,7 @@ public class GodotBluetooth extends Godot.SingletonBase
                             cThread.sendData(dataToSend);
                         }
                         else {
-                            Toast.makeText(activity, "Bluetooth not connected!", Toast.LENGTH_LONG).show();
+                            println( "Bluetooth not connected!");
                         }
                     }
             });
@@ -308,7 +309,7 @@ public class GodotBluetooth extends Godot.SingletonBase
                             cThread.sendDataBytes(dataBytesToSend);
                         }
                         else {
-                            Toast.makeText(activity, "Bluetooth not connected!", Toast.LENGTH_LONG).show();
+                            println( "Bluetooth not connected!");
                         }
                     }
             });
@@ -386,22 +387,22 @@ public class GodotBluetooth extends Godot.SingletonBase
             case REQUEST_ENABLE_BT:
                 
                 if(resultCode == Activity.RESULT_OK) {
-                    Toast.makeText(activity, "Bluetooth Activated!", Toast.LENGTH_LONG).show();
+                    println( "Bluetooth Activated!");
                 }
                 else {
                     if(bluetoothRequired){
-                        Toast.makeText(activity, "Bluetooth wasn't activated, application closed!", Toast.LENGTH_LONG).show();
+                        println( "Bluetooth wasn't activated, application closed!");
                         activity.finish();
                     }
                     else{
-                        Toast.makeText(activity, "Bluetooth wasn't activated!", Toast.LENGTH_LONG).show();
+                        println( "Bluetooth wasn't activated!");
                     }
                 }
 
                 break;
                 
             default:
-                Toast.makeText(activity, "ERROR: Unknown situation!", Toast.LENGTH_LONG).show();
+                println( "ERROR: Unknown situation!");
         }
     }
 
