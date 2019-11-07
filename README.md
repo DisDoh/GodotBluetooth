@@ -69,7 +69,7 @@ The following functions are available:
 **Startup Function**
 
 ```GDScript
-void init(get_instance_ID(), bool bluetoothRequired)
+void init(get_instance_id(), bool bluetoothRequired)
 ```
 The *bluetoothRequired* is a boolean that tells if the bluetooth is required inside the game/application. If `true`, the game/application will close when the bluetooth is off and the user refuses to activate on the startup, if `false`, the game/application will continue in the occurrence of the same situation.
 
@@ -120,14 +120,5 @@ For complete examples of usage for both *Native Layout* and *Custom Layout*, see
 
 ![Godot Bluetooth](/_img_/layouts.png?raw=true "Native and Custom Layouts")
 
-**REMEMBER: You need to compile the module and add the binaries in the examples as per the instructions at the beginning of this file so that the examples work!**
+**Note: The example is here just to show how it should work but actually the master branch of this fork is using godot 2.1.6 for his example**
 
-The circuit used in the demos is quite simple, and can be seen below:
-
-<p align="center">
-<img src="https://raw.githubusercontent.com/favarete/GodotBluetooth/master/_img_/GodotBluetoothCircuitExample.png" alt="Arduino Circuit Example" width="50%" />
- </p>
-
-The file *bluetoothExample.ino* containing the code used in Arduino, can be found inside the *GodotBluetoothDemos/Arduino* folder.
-
-Be creative! =)
