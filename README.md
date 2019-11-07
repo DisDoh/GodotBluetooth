@@ -1,8 +1,12 @@
 ![Godot Bluetooth](/_img_/header.png?raw=true "Godot Bluetooth")
 
-This module is a native Bluetooth implementation intended to perform fundamental tasks in a communication between Microcontrollers (especially Arduino) and Games/Applications, made with Godot Engine, running inside Android. At the moment this module doesn't support communication between two mobile devices, but such functionality can be added in the future.
+Original Text"This module is a native Bluetooth implementation intended to perform fundamental tasks in a communication between Microcontrollers (especially Arduino) and Games/Applications, made with Godot Engine, running inside Android. At the moment this module doesn't support communication between two mobile devices, but such functionality can be added in the future."
+This module is a fork of a previous module for godot. I'm currently developping it for android communication process.
+For now the module can send and receive a string between two android devices. It's still under development.
 
-The module has been tested with [Godot-2.1.x-stable](https://github.com/godotengine/godot/releases) and *HC-05/06* Bluetooth module(hardware) on an *Arduino Uno R3*.
+The module has been tested with [Godot-3.1.x-stable](https://github.com/godotengine/godot/releases) and two android devices.
+
+The following text as been modified to work with Godot 3.1.x-stable:
 
 ## Available Features
 > Native Dialog Box Layout;
@@ -14,14 +18,15 @@ The module has been tested with [Godot-2.1.x-stable](https://github.com/godoteng
 2. Compile the Android Export Templates. [[docs]](http://docs.godotengine.org/en/stable/reference/compiling_for_android.html)
 
 ## Configure GodotBluetooth
-1. Add the module in the `engine.cfg`:
+1. Add the module in the `project.godot`:
 ```
 [android]
 modules="org/godotengine/godot/GodotBluetooth"
 ```
 2. On the project *Export* settings, load the *Custom Package* with the "GodotBluetooth" compiled module templates.
 
-**[note]** The mandatory permissions are already configured. They're: 
+**[note]** The mandatory permissions have to be added in godot/platform/android/java/AndroidManifest.xml
+                After the scons compilation for the export templates: 
 
 ```XML
 <uses-permission android:name="android.permission.BLUETOOTH" />
@@ -36,9 +41,9 @@ To use the module functions on your scripts, start the module as follows:
 var bluetooth
 
 func _ready():
-	if(Globals.has_singleton("GodotBluetooth")):
-		bluetooth = Globals.get_singleton("GodotBluetooth")
-		bluetooth.init(get_instance_ID(), true)
+	if(Engine.has_singleton("GodotBluetooth")):
+		bluetooth = Engine.get_singleton("GodotBluetooth")
+		bluetooth.init(get_instance_id(), true)
 
 ```
 
