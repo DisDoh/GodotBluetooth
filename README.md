@@ -75,6 +75,15 @@ The *bluetoothRequired* is a boolean that tells if the bluetooth is required ins
 
 ___
 
+**Start the server on one phone**
+
+```GDScript
+void startServerThread()
+```
+
+You have to start the server once on one phone to be able to receive connection and communicate with other phones.
+___
+
 **Paired Devices Layout**
 
 ```GDScript
@@ -91,26 +100,51 @@ The *deviceID* is an integer representing the device you want to connect, only w
 
 ___
 
-**Send Data**
+**Send String Data**
 
 ```GDScript
-void sendData(String stringData)
-void sendDataBytes(RawArray byteData)
-```
-The *stringData* is a string containing the data you want to send, the module will take care of transforming this string into a byte array to perform comunication. The *byteData* is a raw array, in case you want to send the byte array directly.
+void msgSetName("string") / "int" for integer
+void msgAddString(String) / repeat for more string in array
+void sendMsg()
 
+example:
+
+func sendStrings(name):
+if bluetooth:
+    bluetooth.msgSetName("string")
+    bluetooth.msgAddString("PlayerNames")
+    bluetooth.msgAddString(name)
+    bluetooth.msgAddString(name2)
+    bluetooth.sendMsg()
+    print("sended name")
+else:
+    print("no bluetooth")
+
+```
+To send a string you have to set the message to "string" with bluetooth.msgSetName("string").
+Then you should set a tag for the array to be able to retrieve the string array (in the example it's "PlayerNames")
+Then add as much string as you want( don't have done an overload test). 
+
+___
+
+**Send Int Data /Deprecated**
+
+
+The send int data func is deprecated as the string send function can be used for int too by casting in Godot.
+But it's similar use as sending a string.
 ___
 
 **Callbacks**
 
 ```GDScript
-_on_data_received(String dataReceived)
+_on_data_received_string(String data_received)
+_on_data_received_int(int data_received)
 _on_disconnected()
 _on_single_device_found(String deviceName, String deviceAddress, String deviceID)
 _on_connected(String deviceName, String deviceAddress)
 _on_connected_error()
 ```
-The *dataReceived* is a string containing the data sended by the Microcontroller. On the `_on_single_device_found`, the *deviceName*, *deviceAddress* and *deviceID* are the informations found about each of the paired devices individually, as the Android bluetooth adapter finds them (see the *GodotBluetoothDemos* folder for an example of use), the same variables on the `_on_connected` shows the information about the device that has been connected after the user make a choice.
+The *data_received* is an array of string or int containing the data sended by the connected Android device. On the `_on_single_device_found`, the *deviceName*, *deviceAddress* and *deviceID* are the informations found about each of the paired devices individually, as the Android bluetooth adapter finds them (see the *GodotBluetoothDemos*/Deprecated folder for an example of use), the same variables on the `_on_connected` shows the information about the device that has been connected after the user make a choice.
 
 ___
 
@@ -120,5 +154,5 @@ For complete examples of usage for both *Native Layout* and *Custom Layout*, see
 
 ![Godot Bluetooth](/_img_/layouts.png?raw=true "Native and Custom Layouts")
 
-**Note: The example is here just to show how it should work but actually the master branch of this fork is using godot 2.1.6 for his example**
+**Note: The example is here just to show how it should work but actually the master branch of this fork is using godot 2.1.6 for his example and there is some change to the use of the plugin you should refer to this README**
 
