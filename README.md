@@ -1,6 +1,7 @@
 ![Godot Bluetooth](/_img_/header.png?raw=true "Godot Bluetooth")
 
 Original Text"This module is a native Bluetooth implementation intended to perform fundamental tasks in a communication between Microcontrollers (especially Arduino) and Games/Applications, made with Godot Engine, running inside Android. At the moment this module doesn't support communication between two mobile devices, but such functionality can be added in the future."
+
 This module is a fork of a previous module for godot. I'm currently developping it for android communication process.
 For now the module can send and receive a string between two android devices. It's still under development.
 
