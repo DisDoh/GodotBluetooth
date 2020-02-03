@@ -331,6 +331,32 @@ public class GodotBluetooth extends Godot.SingletonBase
         else {
             Log.d(TAG, "ERROR: Module Wasn't Initialized!");
         }
+    }   
+    
+    /**
+* Reset connection status'
+     */
+
+    public void resetConnection()
+    {
+        GodotLib.calldeferred(instanceId, "_on_disconnected_from_pair", new Object[]{});
+        if (isServer)
+        {
+//            if (cThreadServer != null)
+//            {
+//                aThread.interrupt();
+//                cThreadServer.interrupt();
+//            }
+        }
+        else
+        {
+            pairedDevicesListed = false;
+            connected = false;
+            if (cThreadClient != null)
+            {
+                cThreadClient.interrupt();
+            }
+        }
     }
 
     /**
@@ -363,7 +389,7 @@ public class GodotBluetooth extends Godot.SingletonBase
         catch (IOException e) {
             pairedDevicesListed = false;
             connected = false;
-            GodotLib.calldeferred(instanceId, "_on_connected_error", new Object[]{ });
+            GodotLib.calldeferred(instanceId, "_on_connected_error", new Object[]{});
             Log.d(TAG, "ERROR: Cannot connect to " + MAC + " Exception: " + e);
         }
     }
@@ -623,12 +649,13 @@ public class GodotBluetooth extends Godot.SingletonBase
                 } 
 
                 catch (IOException e) {
+                    GodotLib.calldeferred(instanceId, "_on_disconnected_from_server", new Object[]{});
                     Log.e(TAG, "localhandler error");
+                    resetConnection();
                     break;
                 }
             }
         }
-
         public void sendData(String dataToSend) {
 
             byte[] dataBuffer = dataToSend.getBytes();
@@ -684,6 +711,20 @@ public class GodotBluetooth extends Godot.SingletonBase
                 Log.d(TAG, "ERROR: Unknown situation!");
         }
     }
+    
+    
+//    @Override
+//    public void this.onResume() 
+//    {
+//        super.onResume();
+//        GodotLib.calldeferred(instanceId, "_on_resume", new Object[]{});
+//    }
+//    @Override
+//    public void onPause() 
+//    {
+//        super.onPause();
+//        GodotLib.calldeferred(instanceId, "_on_pause", new Object[]{});
+//    }
 
     /* Definitions
      * ********************************************************************** */
@@ -718,6 +759,7 @@ public class GodotBluetooth extends Godot.SingletonBase
             "msgAddInt",
             "startServerThread",
             "isServer",
+            "resetConnection",
         });
 
         this.activity = activity;
