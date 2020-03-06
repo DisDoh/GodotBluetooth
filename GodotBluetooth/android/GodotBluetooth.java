@@ -57,12 +57,14 @@ public class GodotBluetooth extends Godot.SingletonBase
     StringBuilder receivedData = new StringBuilder();
     private static String macAdress;
     String remoteBluetoothName;
+    String remoteBluetoothAddress;
     String[] externalDevicesDialogAux;
     private static final String TAG = "godotbluetooth";
 
 
 	/** The current connections. */
 	private HashMap<String, ConnectedThread> currentConnections;
+	private HashMap<String, BluetoothSocket> socketConnections;
 
     BluetoothAdapter localBluetooth;
     BluetoothDevice remoteBluetooth;
@@ -70,7 +72,6 @@ public class GodotBluetooth extends Godot.SingletonBase
     BluetoothSocket socketServer;
     private boolean isServer = true;
     UUID bluetoothUUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
-
     /* Methods
      * ********************************************************************** */
 
@@ -85,15 +86,17 @@ public class GodotBluetooth extends Godot.SingletonBase
                 public void run() {
                     localBluetooth = BluetoothAdapter.getDefaultAdapter();
                     if(localBluetooth == null) {
-                        Log.d(TAG, "ERROR: Bluetooth Adapter not found!");
+                        Log.e(TAG, "ERROR: Bluetooth Adapter not found!");
                         activity.finish();
                     }
                     else if (!localBluetooth.isEnabled()){
                         Intent enableBluetoothIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                         activity.startActivityForResult(enableBluetoothIntent, REQUEST_ENABLE_BT);
-                        Log.d(TAG, "Asked For BLUETOOTH");
+                        Log.e(TAG, "Asked For BLUETOOTH");
                         
                     }
+                    currentConnections = new HashMap<String, ConnectedThread>();
+                    socketConnections = new HashMap<String, BluetoothSocket>();
                     instanceId = newInstanceId;
                     bluetoothRequired = newBluetoothRequired;
                     initialized = true;
@@ -108,7 +111,7 @@ public class GodotBluetooth extends Godot.SingletonBase
                                     Log.e(TAG, "_on_msg_received" + m.addrPattern());
                                     int newMsg = m.get(0).intValue();
                                     msgIncr = newMsg;//GodotLib.calldeferred(instanceId, "_on_data_received_size", new Object[]{ newMsg });
-                                    Log.d(TAG, "_on_data_received_size and send to Godot");
+                                    Log.e(TAG, "_on_data_received_size and send to Godot");
                                 }
                                 if (m.checkAddrPattern("string"))
                                 {
@@ -119,7 +122,7 @@ public class GodotBluetooth extends Godot.SingletonBase
                                         newMsg[i] = String.valueOf(m.get(i));
                                     }
                                     GodotLib.calldeferred(instanceId, "_on_data_received_string", new Object[]{ newMsg });
-                                    Log.d(TAG, "_on_data_received_string and send to Godot");
+                                    Log.e(TAG, "_on_data_received_string and send to Godot");
                                     msgIncr = 0;
                                 }
                                 else if (m.checkAddrPattern("int"))
@@ -131,7 +134,7 @@ public class GodotBluetooth extends Godot.SingletonBase
                                         newMsg[i] =  m.get(i).intValue();
                                     }
                                     GodotLib.calldeferred(instanceId, "_on_data_received_int", new Object[]{ newMsg });
-                                    Log.d(TAG, "_on_data_received_int and send to Godot");
+                                    Log.e(TAG, "_on_data_received_int and send to Godot");
                                 }
                             }
                             
@@ -148,7 +151,7 @@ public class GodotBluetooth extends Godot.SingletonBase
 //                                //String finalizedData = receivedData.substring(1, dataSize);
 //                                GodotLib.calldeferred(instanceId, "_on_data_received", new Object[]{ newData });
 //
-//                                Log.d(TAG, "_on_data_received and send to Godot");
+//                                Log.e(TAG, "_on_data_received and send to Godot");
 //
 //
 //                                //receivedData.delete(0, receivedData.length());
@@ -163,8 +166,11 @@ public class GodotBluetooth extends Godot.SingletonBase
 
     public void startServerThread()
     {
-        aThread = new AcceptThread();
-        aThread.start();        
+        if (aThread == null)
+        {
+            aThread = new AcceptThread();
+            aThread.start();        
+        }
     }
 
 /**
@@ -205,7 +211,7 @@ public class GodotBluetooth extends Godot.SingletonBase
                                 socket.close();
                                 connected = false;
                                 pairedDevicesListed = false;
-                                Log.d(TAG, "Asked For BLUETOOTH");
+                                Log.e(TAG, "Asked For BLUETOOTH and closed socket");
                                 GodotLib.calldeferred(instanceId, "_on_disconnected", new Object[]{});
                             }
                             catch (IOException e) {
@@ -226,7 +232,7 @@ public class GodotBluetooth extends Godot.SingletonBase
 
         else {
         
-            Log.d(TAG, "ERROR: Module Wasn't Initialized!");
+            Log.e(TAG, "ERROR: Module Wasn't Initialized!");
         }
     }
 
@@ -256,7 +262,7 @@ public class GodotBluetooth extends Godot.SingletonBase
         }
 
         AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-            builder.setTitle("Choose a Device To Connect!");
+            builder.setTitle("Choose a Paired Device To Connect!");
             builder.setItems(externalDevicesDialogAux, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
@@ -288,7 +294,7 @@ public class GodotBluetooth extends Godot.SingletonBase
                 String externalDeviceAddress = device.getAddress();
 
                 GodotLib.calldeferred(instanceId, "_on_single_device_found", new Object[]{ externalDeviceName, externalDeviceAddress, externalDeviceID });
-                Log.d(TAG, "_on_single_device_found");
+                Log.e(TAG, "_on_single_device_found");
                 externalDeviceID += 1;
             }
 
@@ -310,7 +316,7 @@ public class GodotBluetooth extends Godot.SingletonBase
 
                             macAdress = device.getAddress();
                             remoteBluetoothName = device.getName();
-                            
+                            remoteBluetoothAddress = device.getAddress();
                             createSocket(macAdress);
                         }
                         else{
@@ -319,42 +325,42 @@ public class GodotBluetooth extends Godot.SingletonBase
                                 connected = false;
                                 pairedDevicesListed = false;
                                 
-                                Log.d(TAG, "Bluetooth Disconnected!");
+                                Log.e(TAG, "Bluetooth Disconnected!");
                             }
                             catch (IOException e) {
-                                Log.d(TAG,  "ERROR: \n" + e);
+                                Log.e(TAG,  "ERROR: \n" + e);
                             }
                         }
                     }
             });
         }
         else {
-            Log.d(TAG, "ERROR: Module Wasn't Initialized!");
+            Log.e(TAG, "ERROR: Module Wasn't Initialized!");
         }
     }   
     
-    /**
+ /**
 * Reset connection status'
      */
 
     public void resetConnection()
     {
         GodotLib.calldeferred(instanceId, "_on_disconnected_from_pair", new Object[]{});
-        if (isServer)
+        if (!isServer)
         {
-//            if (cThreadServer != null)
-//            {
-//                aThread.interrupt();
-//                cThreadServer.interrupt();
-//            }
-        }
-        else
-        {
-            pairedDevicesListed = false;
-            connected = false;
-            if (cThreadClient != null)
-            {
-                cThreadClient.interrupt();
+            try {
+                socket.close();
+                connected = false;
+                pairedDevicesListed = false;
+                
+                if (cThreadClient != null)
+                {
+                    cThreadClient.interrupt();
+                }
+                Log.e(TAG, "reset Bluetooth Disconnected!");
+            }
+            catch (IOException e) {
+                Log.e(TAG,  "ERROR: \n" + e);
             }
         }
     }
@@ -366,31 +372,32 @@ public class GodotBluetooth extends Godot.SingletonBase
     private void createSocket (String MAC) {
 
         remoteBluetooth = localBluetooth.getRemoteDevice(MAC);
-
-        try {
+        try 
+        {
             socket = remoteBluetooth.createRfcommSocketToServiceRecord(bluetoothUUID);
             if(!socket.isConnected())
             {
                 socket.connect();
+                Log.e(TAG, "Socket connected ...");
             }
             else
             {
-                Log.d(TAG, "Already connected ...");
+                Log.e(TAG, "Already connected ...");
             }
             connected = true;
             pairedDevicesListed = true;
             cThreadClient = new ConnectedThread(socket);
             cThreadClient.start();
-            GodotLib.calldeferred(instanceId, "_on_connected", new Object[]{ remoteBluetoothName, macAdress });
+            GodotLib.calldeferred(instanceId, "_on_connected", new Object[]{ remoteBluetoothName,  remoteBluetoothAddress});
             isServer = false;
-            Log.d(TAG, "Connected With " + remoteBluetoothName);
-            }
+            Log.e(TAG, "Connected With " + remoteBluetoothName);
+        }
 
         catch (IOException e) {
             pairedDevicesListed = false;
             connected = false;
             GodotLib.calldeferred(instanceId, "_on_connected_error", new Object[]{});
-            Log.d(TAG, "ERROR: Cannot connect to " + MAC + " Exception: " + e);
+            Log.e(TAG, "ERROR: Cannot connect to " + MAC + " Exception: " + e);
         }
     }
 
@@ -415,7 +422,7 @@ public class GodotBluetooth extends Godot.SingletonBase
                             }
                         }
                         else {
-                        Log.d(TAG, "Bluetooth not connected! sending data");
+                        Log.e(TAG, "Bluetooth not connected! sending data");
                         }
                     }
             });
@@ -443,7 +450,7 @@ public class GodotBluetooth extends Godot.SingletonBase
                             }
                         }
                         else {
-                            Log.d(TAG, "Bluetooth not connected! not able to send data bytes");
+                            Log.e(TAG, "Bluetooth not connected! not able to send data bytes");
                         }
                     }
             });
@@ -513,7 +520,7 @@ public class GodotBluetooth extends Godot.SingletonBase
                             }
                         }
                         else {
-                            Log.d(TAG, "Bluetooth not connected! not able to send data bytes");
+                            Log.e(TAG, "Bluetooth not connected! not able to send data bytes");
                         }
                     }
             });
@@ -525,7 +532,7 @@ public class GodotBluetooth extends Godot.SingletonBase
     }
     public String getDeviceMacAdress()
     {
-        return macAdress;
+        return localBluetooth.getAddress();
     }
     public boolean isServer()
     {
@@ -548,6 +555,7 @@ public class GodotBluetooth extends Godot.SingletonBase
     private class AcceptThread extends Thread 
     {
         private final BluetoothServerSocket mmServerSocket;
+        private ConnectedThread tempThreadServer;
 
         public AcceptThread() {
             // Use a temporary object that is later assigned to mmServerSocket
@@ -556,40 +564,59 @@ public class GodotBluetooth extends Godot.SingletonBase
             try {
                 // MY_UUID is the app's UUID string, also used by the client code.
                 tmp = localBluetooth.listenUsingRfcommWithServiceRecord("DisD", bluetoothUUID);
-                Log.d(TAG, "Socket's listen() method success");
+                Log.e(TAG, "Socket's listen() method success");
             } catch (IOException e) {
                 Log.e(TAG, "Socket's listen() method failed", e);
             }
             mmServerSocket = tmp;
             
-		currentConnections = new HashMap<String, ConnectedThread>();
         }
 
         public void run() {
             socketServer = null;
             // Keep listening until exception occurs or a socket is returned.
-            while (true) {
-                try {
+            while (true) 
+            {
+                try 
+                {
                     socketServer = mmServerSocket.accept();
-                    Log.d(TAG, "Socket's accept() method success");
-                } catch (IOException e) {
+                    Log.e(TAG, "Socket's accept() method success");
+                } catch (IOException e) 
+                {
                     Log.e(TAG, "Socket's accept() method failed", e);
                     break;
                 }
 
-                if (socketServer != null) {
+                if (socketServer != null) 
+                {
                     // A connection was accepted. Perform work associated with
                     // the connection in a separate thread.
                     
-                    GodotLib.calldeferred(instanceId, "_on_received_connection", new Object[]{});
+                    GodotLib.calldeferred(instanceId, "_on_received_connection", new Object[]{socketServer.getRemoteDevice().getAddress()});
                     
-                    Log.d(TAG, "Socket's received connection");
+                    Log.e(TAG, "Socket's received connection" + socketServer.getRemoteDevice().getAddress());
                     connected = true;
-                    if (!currentConnections.containsKey(socketServer))
+                    if (currentConnections.containsKey(socketServer.getRemoteDevice().getAddress()))
+                    {
+                        //currentConnections.get(socketServer.getRemoteDevice().getAddress()).interrupt();
+                        currentConnections.remove(socketServer.getRemoteDevice().getAddress()); socketConnections.remove(socketServer.getRemoteDevice().getAddress());
+                        
+//                        try
+//                        {
+//                            socketConnections.get(socketServer.getRemoteDevice().getAddress()).close();
+////                            socketServer.close();
+//                        }
+//                        catch(IOException e)
+//                        {
+//                            Log.e(TAG, "Could not close the connecting socket", e);
+//                        }
+                    }
+                    if (!currentConnections.containsKey(socketServer.getRemoteDevice().getAddress()))
                     {
                         
                         cThreadServer = new ConnectedThread(socketServer);
                         cThreadServer.start();
+                        socketConnections.put(socketServer.getRemoteDevice().getAddress(), socketServer);
                         currentConnections.put(socketServer.getRemoteDevice().getAddress(), cThreadServer);
                     }
                     socketServer = null;
@@ -602,6 +629,7 @@ public class GodotBluetooth extends Godot.SingletonBase
         public void cancel() {
             try {
                 mmServerSocket.close();
+                Log.e(TAG, "Closed Server side Socket");
             } catch (IOException e) {
                 Log.e(TAG, "Could not close the connect socket", e);
             }
@@ -616,13 +644,14 @@ public class GodotBluetooth extends Godot.SingletonBase
 
         private final InputStream mmInStream;
         private final OutputStream mmOutStream;
-
+        private final BluetoothSocket tempSocket;
         public ConnectedThread(BluetoothSocket newSocket) {
 
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
-
-            try {
+            tempSocket = newSocket;
+            try 
+            {
                 tmpIn = newSocket.getInputStream();
                 tmpOut = newSocket.getOutputStream();
             } catch (IOException e) { }
@@ -637,7 +666,8 @@ public class GodotBluetooth extends Godot.SingletonBase
             int bytes;
 
             while (true) {
-                try {
+                try 
+                {
                     bytes = mmInStream.read(buffer);
                     String externalData = new String(buffer, 0, bytes);
                     
@@ -648,10 +678,68 @@ public class GodotBluetooth extends Godot.SingletonBase
                     }
                 } 
 
-                catch (IOException e) {
-                    GodotLib.calldeferred(instanceId, "_on_disconnected_from_server", new Object[]{});
+                catch (IOException f) {
+                    GodotLib.calldeferred(instanceId, "_on_disconnected_from_server", new Object[]{tempSocket.getRemoteDevice().getAddress()});
                     Log.e(TAG, "localhandler error");
-                    resetConnection();
+                    if (!isServer)
+                    {
+                        connected = false;
+                    }
+//                    if (mmInStream != null) 
+//                    {
+//                        try 
+//                        {
+//                            mmInStream.close();
+//                            Log.e(TAG, "Closed InStream");
+//                        } 
+//                        catch (Exception e)
+//                        {
+//                            Log.e(TAG, "Closing connected InStream error");
+//                        }
+////                        mmInStream = null;
+//                    }
+//
+//                    if (mmOutStream != null) 
+//                    {
+//                        try 
+//                        {
+//                            mmOutStream.close();
+//                            Log.e(TAG, "Closed OutStream");
+//                        } 
+//                        catch (Exception e) 
+//                        {
+//                            Log.e(TAG, "Closing connected OutStream error");
+//                        }
+////                        mmOutStream = null;
+//                    }
+
+                    if (tempSocket != null) 
+                    {
+                        try 
+                        {
+                            tempSocket.close();
+//                            tempSocket = null;
+                            Log.e(TAG, "Closed socket");
+                        } 
+                        catch (Exception e) 
+                        {
+                            Log.e(TAG, "Closing connected socket error");
+                        }
+//                        tempSocket = null;
+                    }
+//                    try
+//                                        {
+////                        mmInStream.close();
+////                        mmOutStream.close();
+////                        tempSocket.close();
+////                        connected = false
+//                        Log.e(TAG, "Closed socket");
+//                    }
+//                    catch (IOException f)
+//                    {
+//                        Log.e(TAG, "Closing connected socket error");
+//                    }
+                    //resetConnection();
                     break;
                 }
             }
@@ -680,6 +768,24 @@ public class GodotBluetooth extends Godot.SingletonBase
             } 
             catch (IOException e) { }
         }
+//        public void cancel()
+//        {
+//            
+//            if (tempSocket != null) 
+//            {
+//                try 
+//                {
+//                    tempSocket.close();
+////                            tempSocket = null;
+//                    Log.e(TAG, "Closed socket");
+//                } 
+//                catch (Exception e) 
+//                {
+//                    Log.e(TAG, "Closing connected socket error");
+//                }
+////                        tempSocket = null;
+//            }
+//        }
     }
 
     /**
@@ -693,22 +799,22 @@ public class GodotBluetooth extends Godot.SingletonBase
             case REQUEST_ENABLE_BT:
                 
                 if(resultCode == Activity.RESULT_OK) {
-                    Log.d(TAG,  "Bluetooth Activated!");
+                    Log.e(TAG,  "Bluetooth Activated!");
                 }
                 else {
                     if(bluetoothRequired){
-                        Log.d(TAG, "Bluetooth wasn't activated, application closed!");
+                        Log.e(TAG, "Bluetooth wasn't activated, application closed!");
                         activity.finish();
                     }
                     else{
-                        Log.d(TAG, "Bluetooth wasn't activated!");
+                        Log.e(TAG, "Bluetooth wasn't activated!");
                     }
                 }
 
                 break;
                 
             default:
-                Log.d(TAG, "ERROR: Unknown situation!");
+                Log.e(TAG, "ERROR: Unknown situation!");
         }
     }
     
