@@ -106,20 +106,21 @@ public class GodotBluetooth extends Godot.SingletonBase
                             KetaiOSCMessage m = new KetaiOSCMessage((byte[]) msg.obj);
                             if(m.isValid())
                             {
-                                if (m.checkAddrPattern("sizeArray"))
-                                {
-                                    Log.e(TAG, "_on_msg_received" + m.addrPattern());
-                                    int newMsg = m.get(0).intValue();
-                                    msgIncr = newMsg;//GodotLib.calldeferred(instanceId, "_on_data_received_size", new Object[]{ newMsg });
-                                    Log.e(TAG, "_on_data_received_size and send to Godot");
-                                }
+//                                if (m.checkAddrPattern("sizeArray"))
+//                                {
+//                                    Log.e(TAG, "_on_msg_received" + m.addrPattern());
+//                                    int newMsg = m.get(0).intValue();
+//                                    msgIncr = newMsg;//GodotLib.calldeferred(instanceId, "_on_data_received_size", new Object[]{ newMsg });
+//                                    Log.e(TAG, "_on_data_received_size and send to Godot");
+//                                }
                                 if (m.checkAddrPattern("string"))
                                 {
                                     Log.e(TAG, "_on_msg_received" + m.addrPattern());
+                                    msgIncr = m.get(0).intValue();
                                     String newMsg[] = new String[msgIncr];
-                                    for(int i = 0; i < msgIncr; i++)
+                                    for(int i = 1; i < msgIncr + 1; i++)
                                     {
-                                        newMsg[i] = String.valueOf(m.get(i));
+                                        newMsg[i - 1] = String.valueOf(m.get(i));
                                     }
                                     GodotLib.calldeferred(instanceId, "_on_data_received_string", new Object[]{ newMsg });
                                     Log.e(TAG, "_on_data_received_string and send to Godot");
@@ -467,9 +468,10 @@ public class GodotBluetooth extends Godot.SingletonBase
                 @Override
                     public void run() {
                         if(connected) {
-                            sizeArrayToSendBeforeSend = new OscMessage("sizeArray");
-                            sizeArrayToSendBeforeSend.add(msgIncr);
-                            final byte[] sizeArrayBytesToSend = sizeArrayToSendBeforeSend.getBytes();
+//                            sizeArrayToSendBeforeSend = new OscMessage("sizeArray");
+//                            sizeArrayToSendBeforeSend.add(msgIncr);
+//                            final byte[] sizeArrayBytesToSend = sizeArrayToSendBeforeSend.getBytes();
+                            msg.add(0,msgIncr);
                             final byte[] dataBytesToSend = msg.getBytes();
                             if (isServer)
                             {
@@ -477,16 +479,16 @@ public class GodotBluetooth extends Godot.SingletonBase
                                 try {
                                     for (Map.Entry<String, ConnectedThread> device : currentConnections.entrySet())
                                     {
-                                        device.getValue().sendMsg(sizeArrayBytesToSend);
-                                        try
-                                        {
-                                            Thread.sleep(20);
-                                        }
-                                        catch(InterruptedException e)
-                                        {
-                                            Log.e(TAG, "Error : " + e);
-                                        }
-                                        device.getValue().sendMsg(dataBytesToSend);
+//                                        device.getValue().sendMsgThread(sizeArrayBytesToSend);
+//                                        try
+//                                        {
+//                                            Thread.sleep(20);
+//                                        }
+//                                        catch(InterruptedException e)
+//                                        {
+//                                            Log.e(TAG, "Error : " + e);
+//                                        }
+                                        device.getValue().sendMsgThread(dataBytesToSend);
                                         try
                                         {
                                             Thread.sleep(20);
@@ -505,17 +507,17 @@ public class GodotBluetooth extends Godot.SingletonBase
                             }
                             else
                             {
-                                cThreadClient.sendMsg(sizeArrayBytesToSend);
-                                
-                                try
-                                {
-                                    Thread.sleep(100);
-                                }
-                                catch(InterruptedException e)
-                                {
-                                    Log.e(TAG, "Error : " + e);
-                                }
-                                cThreadClient.sendMsg(dataBytesToSend);
+//                                cThreadClient.sendMsgThread(sizeArrayBytesToSend);
+//                                
+//                                try
+//                                {
+//                                    Thread.sleep(100);
+//                                }
+//                                catch(InterruptedException e)
+//                                {
+//                                    Log.e(TAG, "Error : " + e);
+//                                }
+                                cThreadClient.sendMsgThread(dataBytesToSend);
                                 msgIncr = 0;
                             }
                         }
@@ -761,7 +763,7 @@ public class GodotBluetooth extends Godot.SingletonBase
             } 
             catch (IOException e) { }
         }
-        public void sendMsg(byte[] bytes)
+        public void sendMsgThread(byte[] bytes)
         {
             try {
                 mmOutStream.write(bytes);
