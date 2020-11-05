@@ -35,7 +35,6 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation files('libs/oscP5.jar')
     implementation 'androidx.annotation:annotation:1.1.0'
     implementation 'androidx.collection:collection:1.1.0'
     implementation 'androidx.legacy:legacy-support-v13:1.0.0'

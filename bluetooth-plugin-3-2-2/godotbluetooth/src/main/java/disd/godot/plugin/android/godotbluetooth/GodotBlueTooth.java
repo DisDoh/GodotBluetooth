@@ -51,6 +51,7 @@ public class GodotBlueTooth extends GodotPlugin {
     boolean connected = false;
     boolean bluetoothRequired = true;
     private int msgIncr = 0;
+    private int msgIncrReceived = 0;
     OscMessage sizeArrayToSendBeforeSend;
     private static final int REQUEST_ENABLE_BT = 1;
     private static final int MESSAGE_READ = 2;
@@ -131,6 +132,7 @@ public class GodotBlueTooth extends GodotPlugin {
         signals.add(new SignalInfo("on_connected", String.class, String.class));
         signals.add(new SignalInfo("on_connected_error"));
         signals.add(new SignalInfo("on_received_connection", String.class));
+        signals.add(new SignalInfo("on_devices_found", Object.class, Object.class));
 
         return signals;
     }
@@ -166,14 +168,14 @@ public class GodotBlueTooth extends GodotPlugin {
                             if(m.isValid()) {
                                 if (m.checkAddrPattern("string")) {
                                     Log.e(TAG, "_on_msg_received" + m.addrPattern());
-                                    msgIncr = m.get(0).intValue();
-                                    String newMsg[] = new String[msgIncr];
-                                    for (int i = 1; i < msgIncr + 1; i++) {
+                                    msgIncrReceived = Integer.valueOf(String.valueOf(m.get(0)));
+                                    String newMsg[] = new String[msgIncrReceived];
+                                    for (int i = 1; i < msgIncrReceived + 1; i++) {
                                         newMsg[i - 1] = String.valueOf(m.get(i));
                                     }
                                     emitSignal("on_data_received_string", new Object[] {newMsg});
                                     Log.e(TAG, "_on_data_received_string and send to Godot");
-                                    msgIncr = 0;
+                                    msgIncrReceived = 0;
                                 }
                             }
                         }
@@ -226,26 +228,26 @@ public class GodotBlueTooth extends GodotPlugin {
                 @Override
                 public void run() {
                     if(connected) {
-                            try {
-                                socket.close();
-                                connected = false;
-                                pairedDevicesListed = false;
-                                Log.e(TAG, "Asked For BLUETOOTH and closed socket");
-                                emitSignal("on_disconnect");
-                               // GodotLib.calldeferred(instanceId, "_on_disconnected", new Object[]{});
-                            }
-                            catch (IOException e) {
-                                Log.e(TAG, "ERROR: \n" + e);
-                            }
+//                            try {
+//                                socket.close();
+//                                connected = false;
+//                                pairedDevicesListed = false;
+//                                Log.e(TAG, "Asked For BLUETOOTH and closed socket");
+//                                emitSignal("on_disconnect");
+//                               // GodotLib.calldeferred(instanceId, "_on_disconnected", new Object[]{});
+//                            }
+//                            catch (IOException e) {
+//                                Log.e(TAG, "ERROR: \n" + e);
+//                            }
+                        resetConnection();
                     }
-                    else{
-                        if (nativeDialog){
-                            nativeLayoutDialogBox();
-                        }
-                        else {
-                            listPairedDevices();
-                        }
+                    if (nativeDialog){
+                        nativeLayoutDialogBox();
                     }
+                    else {
+                        listPairedDevices();
+                    }
+
                 }
             });
         }
@@ -307,21 +309,27 @@ public class GodotBlueTooth extends GodotPlugin {
 
         if(pairedDevices.size() > 0) {
             pairedDevicesAvailable = (Object []) pairedDevices.toArray();
-            int externalDeviceID = 0;
+            int externalTotDeviceID = 0;
 
+            String [] externalDeviceName = new String [pairedDevices.size()];
+            String [] externalDeviceAddress = new String [pairedDevices.size()];
+            int i = 0;
             for (BluetoothDevice device : pairedDevices) {
-                String externalDeviceName = device.getName();
-                String externalDeviceAddress = device.getAddress();
-                emitSignal("on_single_device_found", externalDeviceName, externalDeviceAddress, externalDeviceID);
-               // GodotLib.calldeferred(instanceId, "_on_single_device_found", new Object[]{ externalDeviceName, externalDeviceAddress, externalDeviceID });
-                Log.e(TAG, "_on_single_device_found");
-                externalDeviceID += 1;
-            }
+                externalDeviceName[i] = device.getName();
+                externalDeviceAddress[i] = device.getAddress();
+                i++;
+                // GodotLib.calldeferred(instanceId, "_on_single_device_found", new Object[]{ externalDeviceName, externalDeviceAddress, externalDeviceID });
 
+                externalTotDeviceID += 1;
+            }
+            String [][] aS_Devices = new String[2][externalTotDeviceID];
+            aS_Devices[0] = externalDeviceName;
+            aS_Devices[1] = externalDeviceAddress;
+            emitSignal("on_devices_found", new Object[] {aS_Devices[0]}, new Object[] {aS_Devices[1]});
+            Log.e(TAG, "on_devices_found" + String.valueOf(aS_Devices[0][3]));
             pairedDevicesListed = true;
         }
     }
-
     /**
      * Prepares to connect to another device, identified by the 'newExternalDeviceID'
      */
@@ -338,18 +346,10 @@ public class GodotBlueTooth extends GodotPlugin {
                             remoteBluetoothName = device.getName();
                             remoteBluetoothAddress = device.getAddress();
                             createSocket(macAdress);
+                            connected = true;
                         }
                         else{
-                            try {
-                                socket.close();
-                                connected = false;
-                                pairedDevicesListed = false;
-
-                                Log.e(TAG, "Bluetooth Disconnected!");
-                            }
-                            catch (IOException e) {
-                                Log.e(TAG,  "ERROR: \n" + e);
-                            }
+                            resetConnection();
                         }
                     }
             });
@@ -367,16 +367,21 @@ public class GodotBlueTooth extends GodotPlugin {
     {
         emitSignal("on_disconnected_from_pair");
         //GodotLib.calldeferred(instanceId, "_on_disconnected_from_pair", new Object[]{});
-        if (!isServer)
+        if (!isServer && cThreadClient != null)
         {
             try {
-                socket.close();
-                connected = false;
-                pairedDevicesListed = false;
 
-                if (cThreadClient != null)
+                if (cThreadClient.mmInStream != null)
                 {
-                    cThreadClient.interrupt();
+                    cThreadClient.mmInStream.close();
+                }
+                if (cThreadClient.mmOutStream != null)
+                {
+                    cThreadClient.mmOutStream.close();
+                }
+                if (cThreadClient.tempSocket != null)
+                {
+                    cThreadClient.tempSocket.close();
                 }
                 Log.e(TAG, "reset Bluetooth Disconnected!");
             }
@@ -384,6 +389,36 @@ public class GodotBlueTooth extends GodotPlugin {
                 Log.e(TAG,  "ERROR: \n" + e);
             }
         }
+        else
+        {
+
+            try {
+                isServer = false;
+                connected = false;
+                pairedDevicesListed = false;
+                if(aThread != null) {
+                    aThread.cancel();
+                }
+                if(cThreadServer != null) {
+                    if (cThreadServer.mmInStream != null) {
+                        cThreadServer.mmInStream.close();
+                    }
+                    if (cThreadServer.mmOutStream != null) {
+                        cThreadServer.mmOutStream.close();
+                    }
+                    if (cThreadServer.tempSocket != null) {
+                        cThreadServer.tempSocket.close();
+                    }
+                }
+                Log.e(TAG, "reset Bluetooth Disconnected!");
+            }
+            catch (IOException e) {
+                Log.e(TAG,  "ERROR: \n" + e);
+            }
+
+        }
+        connected = false;
+        pairedDevicesListed = false;
     }
 
     /**
@@ -405,7 +440,6 @@ public class GodotBlueTooth extends GodotPlugin {
             {
                 Log.e(TAG, "Already connected ...");
             }
-            connected = true;
             pairedDevicesListed = true;
             cThreadClient = new ConnectedThread(socket);
             cThreadClient.start();
@@ -434,14 +468,16 @@ public class GodotBlueTooth extends GodotPlugin {
                 @Override
                     public void run() {
                         if(connected) {
-                            Log.e(TAG, "Send msg.........");
+                            Log.e(TAG, "Send msg ...");
 //                            sizeArrayToSendBeforeSend = new OscMessage("sizeArray");
 //                            sizeArrayToSendBeforeSend.add(msgIncr);
 //                            final byte[] sizeArrayBytesToSend = sizeArrayToSendBeforeSend.getBytes();
-                            msg.add(msgIncr);
+                            msg.add(String.valueOf(msgIncr));
                             for (int i = 0; i < msgIncr;i++)
                             {
                                 msg.add(String.valueOf(msgTemp.get(i)));
+                               // Log.e(TAG, "Msg : " + String.valueOf(msgTemp.get(i)));
+
                             }
                             final byte[] dataBytesToSend = msg.getBytes();
                             if (isServer)
@@ -572,7 +608,7 @@ public class GodotBlueTooth extends GodotPlugin {
                         socketConnections.put(socketServer.getRemoteDevice().getAddress(), socketServer);
                         currentConnections.put(socketServer.getRemoteDevice().getAddress(), cThreadServer);
                     }
-                    socketServer = null;
+                    //socketServer = null;
 
                 }
             }
@@ -615,7 +651,7 @@ public class GodotBlueTooth extends GodotPlugin {
 
         public void run() {
 
-            byte[] buffer = new byte[1024];
+            byte[] buffer = new byte[2048];
             int bytes;
 
             while (true) {
@@ -639,47 +675,27 @@ public class GodotBlueTooth extends GodotPlugin {
                     {
                         connected = false;
                     }
-//                    if (mmInStream != null)
-//                    {
-//                        try
-//                        {
-//                            mmInStream.close();
-//                            Log.e(TAG, "Closed InStream");
-//                        }
-//                        catch (Exception e)
-//                        {
-//                            Log.e(TAG, "Closing connected InStream error");
-//                        }
-////                        mmInStream = null;
-//                    }
-//
-//                    if (mmOutStream != null)
-//                    {
-//                        try
-//                        {
-//                            mmOutStream.close();
-//                            Log.e(TAG, "Closed OutStream");
-//                        }
-//                        catch (Exception e)
-//                        {
-//                            Log.e(TAG, "Closing connected OutStream error");
-//                        }
-////                        mmOutStream = null;
-//                    }
 
-                    if (tempSocket != null)
+                    try
                     {
-                        try
+                        if (tempSocket != null)
                         {
+                            if (tempSocket.getInputStream() != null)
+                            {
+                                tempSocket.getInputStream().close();
+                            }
+                            if (tempSocket.getOutputStream() != null)
+                            {
+                                tempSocket.getOutputStream().close();
+                            }
                             tempSocket.close();
+                        }
 //                            tempSocket = null;
-                            Log.e(TAG, "Closed socket");
-                        }
-                        catch (Exception e)
-                        {
-                            Log.e(TAG, "Closing connected socket error");
-                        }
-//                        tempSocket = null;
+                        Log.e(TAG, "Closed socket");
+                    }
+                    catch (Exception e)
+                    {
+                        Log.e(TAG, "Closing connected socket error");
                     }
 //                    try
 //                                        {
