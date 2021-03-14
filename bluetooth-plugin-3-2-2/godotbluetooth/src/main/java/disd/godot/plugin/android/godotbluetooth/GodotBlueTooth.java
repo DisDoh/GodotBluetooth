@@ -62,7 +62,7 @@ public class GodotBlueTooth extends GodotPlugin {
     AcceptThread aThread;
     ConnectedThread cThreadClient;
     ConnectedThread cThreadServer;
-    Handler localHandler;
+    private Handler localHandler;
 
     StringBuilder receivedData = new StringBuilder();
     private static String macAdress;
@@ -94,6 +94,7 @@ public class GodotBlueTooth extends GodotPlugin {
     public GodotBlueTooth(Godot godot) {
         super(godot);
         activity = godot;
+        localHandler = null;
     }
 
     @NonNull
@@ -161,7 +162,7 @@ public class GodotBlueTooth extends GodotPlugin {
                     //instanceId = newInstanceId;
                     bluetoothRequired = newBluetoothRequired;
                     initialized = true;
-                    localHandler = new Handler(){
+                    localHandler = new Handler(Looper.getMainLooper()) {
                         @Override
                         public void handleMessage(Message msg) {
                             KetaiOSCMessage m = new KetaiOSCMessage((byte[]) msg.obj);
@@ -187,10 +188,13 @@ public class GodotBlueTooth extends GodotPlugin {
 
     public void startServerThread()
     {
+        isServer = true;
         if (aThread == null)
         {
             aThread = new AcceptThread();
             aThread.start();
+            Log.e(TAG, "Server started");
+
         }
     }
 
@@ -367,7 +371,7 @@ public class GodotBlueTooth extends GodotPlugin {
     {
         emitSignal("on_disconnected_from_pair");
         //GodotLib.calldeferred(instanceId, "_on_disconnected_from_pair", new Object[]{});
-        if (!isServer && cThreadClient != null)
+        if (cThreadClient != null)
         {
             try {
 
@@ -383,7 +387,9 @@ public class GodotBlueTooth extends GodotPlugin {
                 {
                     cThreadClient.tempSocket.close();
                 }
-                Log.e(TAG, "reset Bluetooth Disconnected!");
+
+                cThreadClient.interrupt();
+                Log.e(TAG, "reset Bluetooth Disconnected! from client");
             }
             catch (IOException e) {
                 Log.e(TAG,  "ERROR: \n" + e);
@@ -397,7 +403,7 @@ public class GodotBlueTooth extends GodotPlugin {
                 connected = false;
                 pairedDevicesListed = false;
                 if(aThread != null) {
-                    aThread.cancel();
+                    aThread.interrupt();
                 }
                 if(cThreadServer != null) {
                     if (cThreadServer.mmInStream != null) {
@@ -409,8 +415,9 @@ public class GodotBlueTooth extends GodotPlugin {
                     if (cThreadServer.tempSocket != null) {
                         cThreadServer.tempSocket.close();
                     }
+                    cThreadServer.interrupt();
                 }
-                Log.e(TAG, "reset Bluetooth Disconnected!");
+                Log.e(TAG, "reset Bluetooth Disconnected! from server");
             }
             catch (IOException e) {
                 Log.e(TAG,  "ERROR: \n" + e);

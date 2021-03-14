@@ -2,5 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.godotengine.godotvibration">
 
-    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.VIBRATE" />    <application>
+    <meta-data
+        android:name="org.godotengine.plugin.v1.GodotVibration"
+        android:value="org.godotengine.godotvibration.GodotVibration"/>
+</application>
 </manifest>
