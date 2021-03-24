@@ -33,8 +33,8 @@ public class GodotVibration extends GodotPlugin {
 
     public GodotVibration(Godot godot) {
         super(godot);
-        this.activity = godot;
-        this.vibrator = (Vibrator) this.activity.getSystemService(Context.VIBRATOR_SERVICE);
+        activity = getActivity();;
+        vibrator = (Vibrator) activity.getSystemService(Context.VIBRATOR_SERVICE);
 
     }
 
@@ -61,11 +61,11 @@ public class GodotVibration extends GodotPlugin {
      * ********************************************************************** */
 
     public void vibrate(int duration, int amplitude) {
-        if (this.vibrator.hasVibrator()) {
+        if (vibrator.hasVibrator()) {
             if (Build.VERSION.SDK_INT >= 26) {
-                this.vibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude));
+                vibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude));
             } else {
-                this.vibrator.vibrate(duration);
+                vibrator.vibrate(duration);
             }
         }
     }

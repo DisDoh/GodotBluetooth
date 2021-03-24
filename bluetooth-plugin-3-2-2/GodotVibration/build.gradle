@@ -8,8 +8,13 @@ android {
         // exclude ARMEABI native so file, ARMEABI has been removed in NDK r17.
         exclude "lib/armeabi/**"
     }
+    gradle.projectsEvaluated {
+        tasks.withType(JavaCompile) {
+            options.compilerArgs << "-Xlint:deprecation"
+        }
+    }
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion 18
         targetSdkVersion 30
         versionCode 1
         versionName "1.0"

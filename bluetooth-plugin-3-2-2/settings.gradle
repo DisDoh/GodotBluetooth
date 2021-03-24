@@ -1,3 +1,4 @@
+include ':godotAdmob'
 include ':GodotVibration'
 rootProject.name='GodotBlueTooth'
 include ':app', ':godot-lib.release'

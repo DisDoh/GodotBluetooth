@@ -1,6 +1,5 @@
 package disd.godot.plugin.android.godotbluetooth;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
@@ -11,7 +10,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.content.DialogInterface;
 import android.util.Log;
-import android.widget.Toast;
 import android.content.Intent;
 
 import java.io.IOException;
@@ -29,7 +27,6 @@ import java.util.ConcurrentModificationException;
 
 import oscP5.OscMessage;
 
-
 import org.godotengine.godot.Godot;
 import org.godotengine.godot.plugin.GodotPlugin;
 import org.godotengine.godot.plugin.SignalInfo;
@@ -44,6 +41,7 @@ import androidx.collection.ArraySet;
  */
 
 public class GodotBlueTooth extends GodotPlugin {
+
     protected Activity activity = null;
 
     private boolean initialized = false;
@@ -93,7 +91,7 @@ public class GodotBlueTooth extends GodotPlugin {
 
     public GodotBlueTooth(Godot godot) {
         super(godot);
-        activity = godot;
+        activity = getActivity();
         localHandler = null;
     }
 
@@ -169,7 +167,7 @@ public class GodotBlueTooth extends GodotPlugin {
                             if(m.isValid()) {
                                 if (m.checkAddrPattern("string")) {
                                     Log.e(TAG, "_on_msg_received" + m.addrPattern());
-                                    msgIncrReceived = Integer.valueOf(String.valueOf(m.get(0)));
+                                    msgIncrReceived = Integer.parseInt(String.valueOf(m.get(0)));
                                     String newMsg[] = new String[msgIncrReceived];
                                     for (int i = 1; i < msgIncrReceived + 1; i++) {
                                         newMsg[i - 1] = String.valueOf(m.get(i));

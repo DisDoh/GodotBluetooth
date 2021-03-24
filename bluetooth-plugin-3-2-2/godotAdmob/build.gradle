@@ -1,5 +1,8 @@
 apply plugin: 'com.android.library'
 
+ext.pluginVersionCode = 3
+ext.pluginVersionName = "4.1.1"
+
 android {
     compileSdkVersion 30
     buildToolsVersion "29.0.3"
@@ -8,16 +11,11 @@ android {
         // exclude ARMEABI native so file, ARMEABI has been removed in NDK r17.
         exclude "lib/armeabi/**"
     }
-    gradle.projectsEvaluated {
-        tasks.withType(JavaCompile) {
-            options.compilerArgs << "-Xlint:deprecation"
-        }
-    }
     defaultConfig {
         minSdkVersion 18
-        targetSdkVersion 30
-        versionCode 1
-        versionName "1.0"
+        targetSdkVersion 29
+        versionCode pluginVersionCode
+        versionName pluginVersionName
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles 'consumer-rules.pro'
@@ -25,10 +23,15 @@ android {
 
     libraryVariants.all { variant ->
         variant.outputs.all { output ->
-            output.outputFileName = "GodotBlueTooth.aar"
+            output.outputFileName = "GodotAdMob.aar"
         }
     }
 
+    gradle.projectsEvaluated {
+        tasks.withType(JavaCompile) {
+            options.compilerArgs << "-Xlint:deprecation"
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
@@ -40,13 +43,11 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation files('libs/oscP5.jar')
-    implementation 'androidx.annotation:annotation:1.1.0'
-    implementation 'androidx.collection:collection:1.1.0'
-    implementation 'androidx.legacy:legacy-support-v13:1.0.0'
 
     compileOnly project(':godot-lib.release')
+    implementation 'com.google.android.gms:play-services-ads:19.3.0'
 
+    implementation 'androidx.appcompat:appcompat:1.1.0'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'

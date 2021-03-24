@@ -1,0 +1,10 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="disd.godot.plugin.android.godotAdMob">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <application>
+        <meta-data
+            android:name="org.godotengine.plugin.v1.GodotAdMob"
+            android:value="disd.godot.plugin.android.godotAdMob.GodotAdMob"/>
+    </application>
+</manifest>
