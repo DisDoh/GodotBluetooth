@@ -15,6 +15,7 @@
             <option value="$PROJECT_DIR$/godot-lib.release" />
             <option value="$PROJECT_DIR$/godotAdmob" />
             <option value="$PROJECT_DIR$/godotbluetooth" />
+            <option value="$PROJECT_DIR$/oscp5" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />
