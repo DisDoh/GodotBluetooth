@@ -7,32 +7,31 @@ For now the module can send and receive a string between two android devices. It
 
 The module has been tested with [Godot-3.1.x-stable](https://github.com/godotengine/godot/releases) and two android devices.
 
-The following text as been modified to work with Godot 3.1.x-stable:
+The following text as been modified to work with Godot 3.3.x-stable:
 
 ## Available Features
 > Native Dialog Box Layout;
 
 > Easy Implementation Of Custom Layouts Inside Godot. 
 
-## Build/Compile Module
-1. Copy the "GodotBluetooth" folder to the *modules* folder inside of Godot's source code;
-2. Compile the Android Export Templates. [[docs]](http://docs.godotengine.org/en/stable/reference/compiling_for_android.html)
+## Build/Use the plugin
 
-## Configure GodotBluetooth
-1. Add the module in the `project.godot`:
-```
-[android]
-modules="org/godotengine/godot/GodotBluetooth"
-```
-2. On the project *Export* settings, load the *Custom Package* with the "GodotBluetooth" compiled module templates.
+1. Open Android Studio
+2. Open project GodotBluetooth
+3. Build it and .aar would be in the output folder
+4. Copy the plugin .aar into the android plugin folder of your Godot project
+5. Enable the plugin in the export for Android options
 
 **[note]** The mandatory permissions have to be added in godot/platform/android/java/AndroidManifest.xml
+
                 After the scons compilation for the export templates: 
 
 ```XML
 <uses-permission android:name="android.permission.BLUETOOTH" />
 <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
 ```
+
+Or in the Godot export for Android permissions.
 
 ## Initialize GodotBluetooth
 To use the module functions on your scripts, start the module as follows: 
@@ -104,8 +103,9 @@ ___
 **Send String Data**
 
 ```GDScript
-void msgSetName("string") / "int" for integer
+void msgSetName("string")
 void msgAddString(String) / repeat for more string in array
+void msgAddString(str(int))
 void sendMsg()
 
 example:
@@ -124,7 +124,7 @@ else:
 ```
 To send a string you have to set the message to "string" with bluetooth.msgSetName("string").
 Then you should set a tag for the array to be able to retrieve the string array (in the example it's "PlayerNames")
-Then add as much string as you want( don't have done an overload test). 
+Then add as much string as you want( don't have done an overload test.[Update] done some implementation Test and can send up to 270 string with three packet maximum, the rest will be ignored). 
 
 ___
 
