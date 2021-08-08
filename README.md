@@ -5,7 +5,7 @@ Original Text"This module is a native Bluetooth implementation intended to perfo
 This module is a fork of a previous module for godot. I'm currently developping it for android communication process.
 For now the module can send and receive a string between two android devices. It's still under development.
 
-The module has been tested with [Godot-3.1.x-stable](https://github.com/godotengine/godot/releases) and two android devices.
+The module has been tested with [Godot-3.3.x-stable](https://github.com/godotengine/godot/releases) and two android devices.
 
 The following text as been modified to work with Godot 3.3.x-stable:
 
