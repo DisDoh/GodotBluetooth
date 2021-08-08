@@ -24,7 +24,6 @@ The following text as been modified to work with Godot 3.3.x-stable:
 
 **[note]** The mandatory permissions have to be added in godot/platform/android/java/AndroidManifest.xml
 
-                After the scons compilation for the export templates: 
 
 ```XML
 <uses-permission android:name="android.permission.BLUETOOTH" />
