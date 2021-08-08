@@ -722,15 +722,15 @@ public class OscP5 implements Observer {
 	@Deprecated public void send( final OscPacket thePacket , final TcpClient theClient ) {
 	}
 
-	public void send( final NetAddressList theNetAddressList , final OscPacket thePacket ) {
-		/* TODO */
-		// _myOscNetManager.send( thePacket , theNetAddressList );
-	}
-
-	public void send( final NetAddressList theNetAddressList , final String theAddrPattern , final Object ... theArguments ) {
-		/* TODO */
-		// _myOscNetManager.send( theNetAddressList , theAddrPattern , theArguments );
-	}
+//	public void send( final NetAddressList theNetAddressList , final OscPacket thePacket ) {
+//		/* TODO */
+//		// _myOscNetManager.send( thePacket , theNetAddressList );
+//	}
+//
+//	public void send( final NetAddressList theNetAddressList , final String theAddrPattern , final Object ... theArguments ) {
+//		/* TODO */
+//		// _myOscNetManager.send( theNetAddressList , theAddrPattern , theArguments );
+//	}
 
 	@Deprecated public static void setLogStatus( final int theIndex , final int theValue ) {
 	}
