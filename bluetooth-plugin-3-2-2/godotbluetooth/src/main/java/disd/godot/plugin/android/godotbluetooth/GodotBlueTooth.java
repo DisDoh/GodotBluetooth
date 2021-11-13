@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.util.Iterator;
 import java.util.Objects;
+import java.util.Random;
 import java.util.UUID;
 import java.util.Set;
 
@@ -67,9 +68,9 @@ public class GodotBlueTooth extends GodotPlugin {
     OscMessage msgTemp;
     Object[] pairedDevicesAvailable;
     AcceptThread aThread;
-    ConnectedThread cThreadClient;
-    ConnectedThread cThreadServer;
-    ConnectedThread cThreadBridge;
+    ConnectedThread cThreadClient = null;
+    ConnectedThread cThreadServer = null;
+    ConnectedThread cThreadBridge = null;
     private Handler localHandler;
 
     StringBuilder receivedData = new StringBuilder();
@@ -80,10 +81,12 @@ public class GodotBlueTooth extends GodotPlugin {
     private static final String TAG = "GodotBlueTooth";
 
 
-	/** The current connections. */
+    /**
+     * The current connections.
+     */
     private HashMap<String, ConnectedThread> currentConnections;
     private HashMap<String, ConnectedThread> scatternetConnections;
-	private HashMap<String, BluetoothSocket> socketConnections;
+    private HashMap<String, BluetoothSocket> socketConnections;
 
     BluetoothAdapter localBluetooth;
     BluetoothDevice remoteBluetooth;
@@ -97,9 +100,9 @@ public class GodotBlueTooth extends GodotPlugin {
     private boolean thirdPart = false;
 
     private String newMsg[];
-    public int firstLimit =  90;
-    public int secondLimit =  (int) (2 * firstLimit);
-    public int thirdLimit =  (int)(3 * firstLimit);
+    public int firstLimit = 90;
+    public int secondLimit = (int) (2 * firstLimit);
+    public int thirdLimit = (int) (3 * firstLimit);
     public int msgIncr = 0;
     public int msgIncrReceived = 0;
     //UUID myUuid = UUID.randomUUID();
@@ -112,14 +115,18 @@ public class GodotBlueTooth extends GodotPlugin {
     private boolean mustNotDeconnect = false;
     private String serverUuid;
     private boolean isComingfromServer = false;
-//    private boolean emitedSignalConnected = false;
+    //    private boolean emitedSignalConnected = false;
     private boolean firstConnectToTheBridge = true;
     private int bridgeNumberFromServer = 0;
     private int incrBridgeNumber = 0;
     private boolean isFromResetConnection = false;
+    private int countConnectedToServerOrABridge = 0;
+    private boolean imConnectedToABridge = false;
+    private boolean imConnecting = false;
+    private boolean mustResetVars = true;
+    private boolean hasAlreadyBeenThere = false;
     /* Methods
      * ********************************************************************** */
-
 
 
     /**
@@ -180,20 +187,19 @@ public class GodotBlueTooth extends GodotPlugin {
     @UsedByGodot
     public void init(final boolean newBluetoothRequired) {
         if (!initialized) {
-            myUuid = setUuid(activity.getBaseContext());
+            myUuid = setUuid(activity.getBaseContext()).split("-")[0];
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     localBluetooth = BluetoothAdapter.getDefaultAdapter();
-                    if(localBluetooth == null) {
+                    if (localBluetooth == null) {
                         //Log.e(TAG, "ERROR: Bluetooth Adapter not found!");
                         activity.finish();
-                    }
-                    else if (!localBluetooth.isEnabled()){
+                    } else if (!localBluetooth.isEnabled()) {
                         Intent enableBluetoothIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                         activity.startActivityForResult(enableBluetoothIntent, REQUEST_ENABLE_BT);
                         //Log.e(TAG, "Asked For BLUETOOTH");
-                        
+
                     }
                     currentConnections = new HashMap<String, ConnectedThread>();
                     socketConnections = new HashMap<String, BluetoothSocket>();
@@ -205,10 +211,11 @@ public class GodotBlueTooth extends GodotPlugin {
                         @Override
                         public void handleMessage(Message msgReceived) {
 
-                            byte [] msgByte = (byte[]) msgReceived.obj;
-                            Log.e(TAG,  "MsgByte Length: " + String.valueOf(msgByte.length));
+                            byte[] msgByte = (byte[]) msgReceived.obj;
+                            Log.e(TAG, "MsgByte Length: " + msgByte.length);
+                            KetaiOSCMessage m = new KetaiOSCMessage(msgByte);
+                            Log.e(TAG, "MsgByte data: " + m.toString());
                             if (msgByte.length < 640) {
-                                KetaiOSCMessage m = new KetaiOSCMessage(msgByte);
                                 //Log.e(TAG,  "Msg m: \n" + m);
                                 if (m.isValid()) {
                                     //if (m.checkAddrPattern("string")) {
@@ -218,12 +225,9 @@ public class GodotBlueTooth extends GodotPlugin {
                                         newMsg = new String[msgIncrReceived];
                                         Log.e(TAG, "I'm a Bridge " + String.valueOf(imABridge));
                                         Log.e(TAG, "I'm in the Scatternet " + String.valueOf(imInTheScatternet));
-                                        if (String.valueOf(m.get(1)).equals(serverUuid))
-                                        {
+                                        if (String.valueOf(m.get(1)).equals(serverUuid)) {
                                             isComingfromServer = true;
-                                        }
-                                        else
-                                        {
+                                        } else {
                                             isComingfromServer = false;
                                         }
 
@@ -326,13 +330,11 @@ public class GodotBlueTooth extends GodotPlugin {
                                             //Log.e(TAG, "_on_data_received_string and send to Godot");
                                         }
                                     }
-                                    if (String.valueOf(m.get(2)).equals("You're the Bridge"))
-                                    {
+                                    if (String.valueOf(m.get(2)).equals("you're a Bridge")) {
                                         serverUuid = String.valueOf(m.get(1));
                                         imABridge = true;
                                         imInTheScatternet = true;
-                                        if (aThread == null)
-                                        {
+                                        if (aThread == null) {
                                             aThread = new AcceptThread();
                                             aThread.start();
                                             Log.e(TAG, "Server started");
@@ -345,12 +347,15 @@ public class GodotBlueTooth extends GodotPlugin {
 //                                        sendMsg();
 
 //                                        if (!emitedSignalConnected) {
-                                            emitSignal("on_connected", serverBluetoothName, serverBluetoothAddress);
+                                        imConnecting = false;
+                                        emitSignal("on_connected", serverBluetoothName, serverBluetoothAddress);
 //                                            emitedSignalConnected = true;
 //                                        }
                                     }
-                                    if (String.valueOf(m.get(2)).equals("Connect to the Bridge")) {
+                                    if (String.valueOf(m.get(2)).equals("Connect to a Bridge") && !imABridge && !isServer) {
                                         mustNotDeconnect = true;
+                                        imConnectedToABridge = true;
+                                        imConnecting = true;
                                         if (cThreadClient != null) {
 
                                             try {
@@ -364,24 +369,27 @@ public class GodotBlueTooth extends GodotPlugin {
                                                 if (cThreadClient.tempSocket != null) {
                                                     cThreadClient.tempSocket.close();
                                                 }
-
                                                 cThreadClient.interrupt();
+                                                cThreadClient = null;
                                                 //Log.e(TAG, "reset Bluetooth Disconnected! from client");
-                                            }
-                                            catch (IOException e) {
-                                                //Log.e(TAG,  "ERROR: \n" + e);
+                                            } catch (IOException e) {
+                                                Log.e(TAG, "ERROR: \n" + e);
                                             }
                                         }
-                                        scatternetSocket = createSocket(String.valueOf(m.get(3)));
-                                        imInTheScatternet = true;
-                                        connected = true;
-                                        Log.e(TAG, "Connected to a Bridge of Scatternet " + String.valueOf(m.get(3)));
+                                        Handler handler = new Handler(Looper.getMainLooper());
+                                        handler.postDelayed(() -> {
+                                            scatternetSocket = createSocket(String.valueOf(m.get(3)));
+                                            imInTheScatternet = true;
+                                            connected = true;
+                                            imConnecting = false;
+                                            Log.e(TAG, "Connected to a Bridge of Scatternet " + String.valueOf(m.get(3)));
 
+                                        }, 1000);
                                     }
-                                    if (String.valueOf(m.get(2)).equals("Emit Signal On connected"))
-                                    {
+                                    if (String.valueOf(m.get(2)).equals("Emit Signal On connected")) {
 //                                        if (!emitedSignalConnected) {
-                                            emitSignal("on_connected", serverBluetoothName, serverBluetoothAddress);
+                                        imConnecting = false;
+                                        emitSignal("on_connected", serverBluetoothName, serverBluetoothAddress);
 //                                            emitedSignalConnected = true;
 //                                        }
 //                                        Log.e(TAG, "Connected to a Bridge of Scatternet");
@@ -391,20 +399,59 @@ public class GodotBlueTooth extends GodotPlugin {
 
                                     }
 
-                                    if (String.valueOf(m.get(2)).equals("Server has Disconnected"))
-                                    {
+                                    if (String.valueOf(m.get(2)).equals("Server has Disconnected")) {
                                         imInTheScatternet = false;
                                         mustNotDeconnect = false;
+                                        imABridge = false;
+                                        connected = false;
+                                        //resetConnection();
+                                        Log.e(TAG, "Server has Disconnected");
                                         resetConnection();
+                                        //emitSignal("on_disconnected", serverBluetoothAddress, myUuid);
                                     }
-                                    if (String.valueOf(m.get(2)).equals("Someone disconnected from bridge"))
+                                    if (String.valueOf(m.get(2)).equals("Someone disconnected from bridge")) {
+                                        if (isServer) {
+                                            Log.e(TAG, "Entered isServer && someone disconnected from bridge");
+                                            emitSignal("on_disconnected", String.valueOf(m.get(3)), myUuid);
+                                        }
+                                    }
+                                    if (String.valueOf(m.get(2)).equals("A bridge disconnected") && imConnectedToABridge)
                                     {
-                                        emitSignal("on_disconnected", String.valueOf(m.get(3)), myUuid);
+                                        mustResetVars = false;
+                                        Log.e(TAG, "Entered A bridge disconnected");
+
+                                        if (imABridge) {
+                                            isComingfromServer = true;
+                                            msg = new OscMessage("string");
+                                            msg.add(String.valueOf(3));
+                                            msg.add(String.valueOf(myUuid));
+                                            msg.add("A bridge disconnected");
+                                            msg.add("End");
+                                            sendDataByte();
+                                            //Random rand = new Random();
+                                            //int wait_time = rand.nextInt(1000) + rand.nextInt(1000) + rand.nextInt(1000) + rand.nextInt(1000);
+//                                            imConnectedToABridge = false;
+//                                            imABridge = false;
+//                                            imConnecting = true;
+//                                            imInTheScatternet = false;
+                                            //                                            Handler handler = new Handler(Looper.getMainLooper());
+//                                            handler.postDelayed(() -> {
+//                                                createSocket(serverBluetoothAddress);
+//                                                imConnecting = false;
+//                                                //emitSignal("on_connected", serverBluetoothName, serverBluetoothAddress);
+//                                                connected = true;
+//                                            }, wait_time);
+                                        }
+                                        if (hasAlreadyBeenThere)
+                                        {
+                                            mustNotDeconnect = true;
+                                            resetConnection();
+                                            mustResetVars = true;
+                                        }
+                                        hasAlreadyBeenThere = true;
                                     }
                                 }
-                            }
-                            else
-                            {
+                            } else {
                                 Log.e(TAG, "over 250kb");
                             }
                         }
@@ -415,11 +462,9 @@ public class GodotBlueTooth extends GodotPlugin {
     }
 
     @UsedByGodot
-    public void startServerThread()
-    {
+    public void startServerThread() {
         isServer = true;
-        if (aThread == null)
-        {
+        if (aThread == null) {
             aThread = new AcceptThread();
             aThread.start();
             //Log.e(TAG, "Server started");
@@ -427,26 +472,26 @@ public class GodotBlueTooth extends GodotPlugin {
         }
     }
 
-/**
- * The Class KetaiOSCMessage.
- */
+    /**
+     * The Class KetaiOSCMessage.
+     */
     public class KetaiOSCMessage extends OscMessage {
 
-	/**
-	 * Instantiates a new ketai osc message.
-	 *
-	 * @param _data the _data
-	 */
+        /**
+         * Instantiates a new ketai osc message.
+         *
+         * @param _data the _data
+         */
         public KetaiOSCMessage(byte[] _data) {
             super("");
             this.parseMessage(_data);
         }
 
-	/* (non-Javadoc)
-	 * @see oscP5.OscPacket#isValid()
-	 */
-     public boolean isValid() {
-		  return isValid;
+        /* (non-Javadoc)
+         * @see oscP5.OscPacket#isValid()
+         */
+        public boolean isValid() {
+            return isValid;
         }
 
     }
@@ -461,7 +506,7 @@ public class GodotBlueTooth extends GodotPlugin {
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if(connected) {
+                    if (connected) {
 //                            try {
 //                                socket.close();
 //                                connected = false;
@@ -475,18 +520,15 @@ public class GodotBlueTooth extends GodotPlugin {
 //                            }
                         resetConnection();
                     }
-                    if (nativeDialog){
+                    if (nativeDialog) {
                         nativeLayoutDialogBox();
-                    }
-                    else {
+                    } else {
                         listPairedDevices();
                     }
 
                 }
             });
-        }
-
-        else {
+        } else {
 
             //Log.e(TAG, "ERROR: Module Wasn't Initialized!");
         }
@@ -502,8 +544,8 @@ public class GodotBlueTooth extends GodotPlugin {
 
         Set<BluetoothDevice> pairedDevices = localBluetooth.getBondedDevices();
 
-        if(pairedDevices.size() > 0) {
-            pairedDevicesAvailable = (Object []) pairedDevices.toArray();
+        if (pairedDevices.size() > 0) {
+            pairedDevicesAvailable = (Object[]) pairedDevices.toArray();
 
             List<String> externalDeviceInfo = new ArrayList<String>();
 
@@ -514,20 +556,21 @@ public class GodotBlueTooth extends GodotPlugin {
                 externalDeviceInfo.add(externalDeviceName + "\n" + externalDeviceAddress);
             }
             externalDevicesDialogAux = new String[externalDeviceInfo.size()];
-            externalDevicesDialogAux = externalDeviceInfo.toArray(new String[externalDeviceInfo.size()]);;
+            externalDevicesDialogAux = externalDeviceInfo.toArray(new String[externalDeviceInfo.size()]);
+            ;
         }
 
         AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-            builder.setTitle("Choose a Paired Device To Connect!");
-            builder.setItems(externalDevicesDialogAux, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    connect(which);
-                }
-            });
-            pairedDevicesListed = true;
-            AlertDialog dialog = builder.create();
-            dialog.show();
+        builder.setTitle("Choose a Paired Device To Connect!");
+        builder.setItems(externalDevicesDialogAux, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                connect(which);
+            }
+        });
+        pairedDevicesListed = true;
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     /**
@@ -541,12 +584,12 @@ public class GodotBlueTooth extends GodotPlugin {
 
         Set<BluetoothDevice> pairedDevices = localBluetooth.getBondedDevices();
 
-        if(pairedDevices.size() > 0) {
-            pairedDevicesAvailable = (Object []) pairedDevices.toArray();
+        if (pairedDevices.size() > 0) {
+            pairedDevicesAvailable = (Object[]) pairedDevices.toArray();
             int externalTotDeviceID = 0;
 
-            String [] externalDeviceName = new String [pairedDevices.size()];
-            String [] externalDeviceAddress = new String [pairedDevices.size()];
+            String[] externalDeviceName = new String[pairedDevices.size()];
+            String[] externalDeviceAddress = new String[pairedDevices.size()];
             int i = 0;
             for (BluetoothDevice device : pairedDevices) {
                 externalDeviceName[i] = device.getName();
@@ -556,57 +599,59 @@ public class GodotBlueTooth extends GodotPlugin {
 
                 externalTotDeviceID += 1;
             }
-            String [][] aS_Devices = new String[2][externalTotDeviceID];
+            String[][] aS_Devices = new String[2][externalTotDeviceID];
             aS_Devices[0] = externalDeviceName;
             aS_Devices[1] = externalDeviceAddress;
-            emitSignal("on_devices_found", new Object[] {aS_Devices[0]}, new Object[] {aS_Devices[1]});
+            emitSignal("on_devices_found", new Object[]{aS_Devices[0]}, new Object[]{aS_Devices[1]});
             //Log.e(TAG, "on_devices_found" + String.valueOf(aS_Devices[0][3]));
             pairedDevicesListed = true;
         }
     }
+
     /**
      * Prepares to connect to another device, identified by the 'newExternalDeviceID'
      */
 
     @UsedByGodot
-    public void connect(final int newExternalDeviceID){
+    public void connect(final int newExternalDeviceID) {
         if (initialized && pairedDevicesListed) {
             activity.runOnUiThread(new Runnable() {
                 @Override
-                    public void run() {
-                        if(!connected){
-                            BluetoothDevice device = (BluetoothDevice) pairedDevicesAvailable[newExternalDeviceID];
+                public void run() {
+                    if (!connected) {
+                        BluetoothDevice device = (BluetoothDevice) pairedDevicesAvailable[newExternalDeviceID];
 
-                            macAdress = device.getAddress();
-                            serverBluetoothName = device.getName();
-                            serverBluetoothAddress = device.getAddress();
-                            
-                            createSocket(macAdress);
-                            connected = true;
-                        }
+                        macAdress = device.getAddress();
+                        serverBluetoothName = device.getName();
+                        serverBluetoothAddress = device.getAddress();
+
+                        createSocket(macAdress);
+                        connected = true;
+                    }
 //                        else{
 //                            resetConnection();
 //                        }
-                    }
+                }
             });
-        }
-        else {
+        } else {
             //Log.e(TAG, "ERROR: Module Wasn't Initialized!");
         }
     }
-
- /**
-* Reset connection status'
+    /**
+     * Reset connection status'
      */
     @UsedByGodot
-    public void resetConnection()
-    {
-        //emitSignal("on_disconnected_from_pair");
-        //GodotLib.calldeferred(instanceId, "_on_disconnected_from_pair", new Object[]{});
-        if (cThreadClient != null) {
-            emitSignal("on_disconnected", cThreadClient.tempSocket.getRemoteDevice().getAddress(), myUuid);
-            isFromResetConnection = true;
-            if (cThreadClient.mmInStream != null) {
+    public void resetConnection() {
+
+//        int wait_time = 800;
+//
+//        Handler handler = new Handler(Looper.getMainLooper());
+//        handler.postDelayed(() -> {
+            if (cThreadClient != null) {
+                if (!mustNotDeconnect)
+                    emitSignal("on_disconnected", cThreadClient.tempSocket.getRemoteDevice().getAddress(), myUuid);
+                isFromResetConnection = true;
+                if (cThreadClient.mmInStream != null) {
                     try {
                         cThreadClient.mmInStream.close();
                     } catch (IOException e) {
@@ -627,19 +672,22 @@ public class GodotBlueTooth extends GodotPlugin {
                         e.printStackTrace();
                     }
                 }
-                cThreadClient.interrupt();
-                cThreadClient = null;
+                if (cThreadClient != null)
+                {
+                    cThreadClient.interrupt();
+                    cThreadClient = null;
+                }
                 //Log.e(TAG, "reset Bluetooth Disconnected! from client");
-        }
-        if (isServer || imABridge)
-        {
-
-            isServer = false;
-            connected = false;
-            pairedDevicesListed = false;
-            if(aThread != null) {
-                aThread.interrupt();
             }
+            if (isServer || imABridge) {
+
+                isServer = false;
+                connected = false;
+                pairedDevicesListed = false;
+                if (aThread != null) {
+                    aThread.interrupt();
+                    aThread = null;
+                }
 //            if(cThreadServer != null) {
 //                if (cThreadServer.mmInStream != null) {
 //                    try {
@@ -664,30 +712,29 @@ public class GodotBlueTooth extends GodotPlugin {
 //                }
 //                cThreadServer.interrupt();
 //            }
-            //Log.e(TAG, "reset Bluetooth Disconnected! from server");
-            isFromResetConnection = true;
-            for (Map.Entry<String, ConnectedThread> stringConnectedThreadEntry : currentConnections.entrySet())
-            {
-                cThreadServer = stringConnectedThreadEntry.getValue();
-                if (cThreadServer != null) {
-                    //  if (Objects.requireNonNull(currentConnections.get(item)).mmInStream != null) {
-                    try {
-                        cThreadServer.mmInStream.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    //  }
-                    //if (Objects.requireNonNull(currentConnections.get(item)).mmOutStream != null) {
-                    try {
-                        cThreadServer.mmOutStream.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    cThreadServer.interrupt();
-                    cThreadServer = null;
+                //Log.e(TAG, "reset Bluetooth Disconnected! from server");
+                isFromResetConnection = true;
+                for (Map.Entry<String, ConnectedThread> stringConnectedThreadEntry : currentConnections.entrySet()) {
+                    cThreadServer = stringConnectedThreadEntry.getValue();
+                    if (cThreadServer != null) {
+                        //  if (Objects.requireNonNull(currentConnections.get(item)).mmInStream != null) {
+                        try {
+                            cThreadServer.mmInStream.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        //  }
+                        //if (Objects.requireNonNull(currentConnections.get(item)).mmOutStream != null) {
+                        try {
+                            cThreadServer.mmOutStream.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        cThreadServer.interrupt();
+                        cThreadServer = null;
 //                    System.out.println(pair.getKey() + " = " + pair.getValue());
 //                    it.remove(); // avoids a ConcurrentModificationException
-                    //  }
+                        //  }
 //                if (Objects.requireNonNull(currentConnections.get(item)).tempSocket != null) {
 //                    try {
 //                        Objects.requireNonNull(currentConnections.get(item)).tempSocket.close();
@@ -696,19 +743,60 @@ public class GodotBlueTooth extends GodotPlugin {
 //                    }
 //                }
 //                Objects.requireNonNull(currentConnections.get(item)).interrupt();
-                    //currentConnections.remove(item);
+                        //currentConnections.remove(item);
+                    }
+                }
+                for (Map.Entry<String, ConnectedThread> stringConnectedThreadEntry : scatternetConnections.entrySet()) {
+                    cThreadServer = stringConnectedThreadEntry.getValue();
+                    if (cThreadServer != null) {
+                        //  if (Objects.requireNonNull(currentConnections.get(item)).mmInStream != null) {
+                        try {
+                            cThreadServer.mmInStream.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        //  }
+                        //if (Objects.requireNonNull(currentConnections.get(item)).mmOutStream != null) {
+                        try {
+                            cThreadServer.mmOutStream.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        cThreadServer.interrupt();
+                        cThreadServer = null;
+                        //                    System.out.println(pair.getKey() + " = " + pair.getValue());
+                        //                    it.remove(); // avoids a ConcurrentModificationException
+                        //  }
+                        //                if (Objects.requireNonNull(currentConnections.get(item)).tempSocket != null) {
+                        //                    try {
+                        //                        Objects.requireNonNull(currentConnections.get(item)).tempSocket.close();
+                        //                    } catch (IOException e) {
+                        //                        e.printStackTrace();
+                        //                    }
+                        //                }
+                        //                Objects.requireNonNull(currentConnections.get(item)).interrupt();
+                        //currentConnections.remove(item);
+                    }
                 }
             }
-        }
-        isFromResetConnection = false;
-        firstConnectToTheBridge = true;
-        imABridge = false;
-        imInTheScatternet = false;
-        connected = false;
-        pairedDevicesListed = false;
-        currentConnections.clear();
-        scatternetConnections.clear();
-        socketConnections.clear();
+            if (mustResetVars)
+            {
+                hasAlreadyBeenThere = false;
+                mustNotDeconnect = false;
+                countConnectedToServerOrABridge = 0;
+                isFromResetConnection = false;
+                imConnectedToABridge = false;
+                firstConnectToTheBridge = true;
+                imABridge = false;
+                imInTheScatternet = false;
+                connected = false;
+                pairedDevicesListed = false;
+                currentConnections.clear();
+                scatternetConnections.clear();
+                socketConnections.clear();
+            }
+//        }, wait_time);
+
     }
 
     /**
@@ -721,18 +809,18 @@ public class GodotBlueTooth extends GodotPlugin {
         try
         {
             socket = remoteBluetooth.createRfcommSocketToServiceRecord(bluetoothUUID);
-            if(!socket.isConnected())
+            if(!socket.isConnected() && cThreadClient == null)
             {
                 socket.connect();
+                pairedDevicesListed = true;
+                cThreadClient = new ConnectedThread(socket);
+                cThreadClient.start();
                 //Log.e(TAG, "Socket connected ...");
             }
-            else
-            {
-                //Log.e(TAG, "Already connected ...");
-            }
-            pairedDevicesListed = true;
-            cThreadClient = new ConnectedThread(socket);
-            cThreadClient.start();
+//            else
+//            {
+//                //Log.e(TAG, "Already connected ...");
+//            }
             //currentConnections.put(socket.getRemoteDevice().getAddress(), cThreadClient);
 //            Handler handler = new Handler(Looper.getMainLooper());
 //            handler.postDelayed(new Runnable() {
@@ -807,7 +895,7 @@ public class GodotBlueTooth extends GodotPlugin {
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    if (connected) {
+                    if (connected && !imConnecting) {
                         isComingfromServer = false;
                         Log.e(TAG, "Sending msg ..." + String.valueOf(msgTemp));
 //                            sizeArrayToSendBeforeSend = new OscMessage("sizeArray");
@@ -913,6 +1001,7 @@ public class GodotBlueTooth extends GodotPlugin {
                     //Log.e(TAG, "Concurrent Error " + e);
                 }
             } else {
+                if (cThreadClient != null)
                 cThreadClient.sendMsgThread(dataBytesToSend);
             }
         }
@@ -929,6 +1018,7 @@ public class GodotBlueTooth extends GodotPlugin {
                 }
             }
             else {
+                if (cThreadClient != null)
                 cThreadClient.sendMsgThread(dataBytesToSend);
             }
         }
@@ -1037,12 +1127,13 @@ public class GodotBlueTooth extends GodotPlugin {
 
                     //Log.e(TAG, "Socket's received connection" + socketServer.getRemoteDevice().getAddress());
                     connected = true;
-                    if (currentConnections.containsKey(socketServer.getRemoteDevice().getAddress()))
-                    {
-                        currentConnections.get(socketServer.getRemoteDevice().getAddress()).interrupt();
-                        currentConnections.remove(socketServer.getRemoteDevice().getAddress());
-                        socketConnections.remove(socketServer.getRemoteDevice().getAddress());
-
+//                    if (currentConnections.containsKey(socketServer.getRemoteDevice().getAddress()))
+//                    {
+//                        Objects.requireNonNull(currentConnections.get(socketServer.getRemoteDevice().getAddress())).interrupt();
+//                        currentConnections.remove(socketServer.getRemoteDevice().getAddress());
+//                        socketConnections.remove(socketServer.getRemoteDevice().getAddress());
+//
+//                    }
 //                        try
 //                        {
 //                            socketConnections.get(socketServer.getRemoteDevice().getAddress()).close();
@@ -1052,12 +1143,12 @@ public class GodotBlueTooth extends GodotPlugin {
 //                        {
 //                            //Log.e(TAG, "Could not close the connecting socket", e);
 //                        }
-                    }
                     if (!currentConnections.containsKey(socketServer.getRemoteDevice().getAddress())) {
                         cThreadServer = new ConnectedThread(socketServer);
                         cThreadServer.start();
                         socketConnections.put(socketServer.getRemoteDevice().getAddress(), socketServer);
-                        if (currentConnections.size() >= 4)
+
+                        if (countConnectedToServerOrABridge >= 4)
                         {
                             scatternetConnections.put(socketServer.getRemoteDevice().getAddress(), cThreadServer);
                             if (scatternetConnections.size() == 1)
@@ -1068,7 +1159,7 @@ public class GodotBlueTooth extends GodotPlugin {
                                 msg = new OscMessage("string");
                                 msg.add("2");
                                 msg.add(myUuid);
-                                msg.add("You're the Bridge");
+                                msg.add("you're a Bridge");
                                 //msg.add(socketBridgeAddress);
                                 msg.add("End");
                                 cThreadBridge.sendMsgThread(msg.getBytes());
@@ -1079,40 +1170,38 @@ public class GodotBlueTooth extends GodotPlugin {
                                 msg = new OscMessage("string");
                                 msg.add("3");
                                 msg.add(myUuid);
-                                msg.add("Connect to the Bridge");
+                                msg.add("Connect to a Bridge");
                                 msg.add(socketBridgeAddress);
                                 msg.add("End");
                                 mustNotDeconnect = true;
                                 cThreadServer.sendMsgThread(msg.getBytes());
                                 Handler handler = new Handler(Looper.getMainLooper());
-                                handler.postDelayed(new Runnable() {
-                                    public void run() {
-                                        if(cThreadServer != null) {
-                                            if (cThreadServer.mmInStream != null) {
-                                                try {
-                                                    cThreadServer.mmInStream.close();
-                                                } catch (IOException e) {
-                                                    e.printStackTrace();
-                                                }
+                                handler.postDelayed(() -> {
+                                    if(cThreadServer != null) {
+                                        if (cThreadServer.mmInStream != null) {
+                                            try {
+                                                cThreadServer.mmInStream.close();
+                                            } catch (IOException e) {
+                                                e.printStackTrace();
                                             }
-                                            if (cThreadServer.mmOutStream != null) {
-                                                try {
-                                                    cThreadServer.mmOutStream.close();
-                                                } catch (IOException e) {
-                                                    e.printStackTrace();
-                                                }
-                                            }
-                                            if (cThreadServer.tempSocket != null) {
-                                                try {
-                                                    cThreadServer.tempSocket.close();
-                                                } catch (IOException e) {
-                                                    e.printStackTrace();
-                                                }
-                                            }
-                                            cThreadServer.interrupt();
                                         }
+                                        if (cThreadServer.mmOutStream != null) {
+                                            try {
+                                                cThreadServer.mmOutStream.close();
+                                            } catch (IOException e) {
+                                                e.printStackTrace();
+                                            }
+                                        }
+                                        if (cThreadServer.tempSocket != null) {
+                                            try {
+                                                cThreadServer.tempSocket.close();
+                                            } catch (IOException e) {
+                                                e.printStackTrace();
+                                            }
+                                        }
+                                        cThreadServer.interrupt();
                                     }
-                                }, 1250);
+                                }, 2000);
                             }
                         }
                         else
@@ -1125,9 +1214,10 @@ public class GodotBlueTooth extends GodotPlugin {
                                 msg.add("End");
                                 cThreadServer.sendMsgThread(msg.getBytes());
                                 currentConnections.put(socketServer.getRemoteDevice().getAddress(), cThreadServer);
-                                Log.e(TAG, "CurrentConnections " + currentConnections.toString());
+                                countConnectedToServerOrABridge += 1;
+                                Log.e(TAG, "CurrentConnections " + currentConnections.toString() + "countConnectedToServerOrABridge " + countConnectedToServerOrABridge);
                         }
-                        if(!imABridge) {
+                        if(isServer) {
                             emitSignal("on_received_connection", socketServer.getRemoteDevice().getAddress(), myUuid);
                         }//socketServer = null;
                     }
@@ -1194,10 +1284,11 @@ public class GodotBlueTooth extends GodotPlugin {
                     {
                         if(imABridge
                             && tempSocket.getRemoteDevice().getAddress().equals(serverBluetoothAddress)
-                            && !isFromResetConnection)
+                            && !isFromResetConnection && !imConnectedToABridge)
                         {
+                            Log.e(TAG, "Entered ImABridge && tempSocket.Address == ServerAddress && !isFromResetConnection ");
+
                             isComingfromServer = true;
-                            imInTheScatternet = false;
                             msg = new OscMessage("string");
                             msg.add(String.valueOf(2));
                             msg.add(String.valueOf(myUuid));
@@ -1205,16 +1296,42 @@ public class GodotBlueTooth extends GodotPlugin {
                             msg.add("End");
                             sendDataByte();
                             //imABridge = false;
-                            emitSignal("on_disconnected", tempSocket.getRemoteDevice().getAddress(), myUuid);
-
-
+                            imInTheScatternet = false;
+                            imABridge = false;
+                            imConnecting = false;
+                            imConnectedToABridge = false;
+                            connected = false;
+                            resetConnection();
+                            //emitSignal("on_disconnected", tempSocket.getRemoteDevice().getAddress(), myUuid);
                         }
-                        else if(isFromResetConnection && imABridge)
+                        else if(imABridge && isFromResetConnection)
                         {
-                            emitSignal("on_disconnected", tempSocket.getRemoteDevice().getAddress(), myUuid);
-                        }
-                        else if (!isFromResetConnection && imABridge)
+                            Log.e(TAG, "Entered ImABridge && isFromResetConnection ");
+                            isComingfromServer = true;
+                            msg = new OscMessage("string");
+                            msg.add(String.valueOf(3));
+                            msg.add(String.valueOf(myUuid));
+                            msg.add("A bridge disconnected");
+                            msg.add("End");
+                            sendDataByte();
+
+                            imABridge = false;
+                            connected = false;
+                            Handler handler = new Handler(Looper.getMainLooper());
+                            handler.postDelayed(() -> {
+
+                                mustNotDeconnect = false;
+                                mustResetVars = true;
+                                resetConnection();
+//                                emitSignal("on_disconnected", tempSocket.getRemoteDevice().getAddress(), myUuid);
+                            }, 1000);
+
+                            //Log.e(TAG, "Entered ImABridge && isFromResetConnection ");
+                           }
+                        else if (!isFromResetConnection && imABridge && !imConnecting)
                         {
+                            //countConnectedToServerOrABridge -= 1;
+                            Log.e(TAG, "Entered ImABridge && !isFromResetConnection ");
                             isComingfromServer = false;
                             msg = new OscMessage("string");
                             msg.add(String.valueOf(3));
@@ -1222,14 +1339,22 @@ public class GodotBlueTooth extends GodotPlugin {
                             msg.add("Someone disconnected from bridge");
                             msg.add(tempSocket.getRemoteDevice().getAddress());
                             msg.add("End");
-                            sendDataByte();
+                            Handler handler = new Handler(Looper.getMainLooper());
+                            handler.postDelayed(() -> sendDataByte() , 300);
                         }
-                        else if(!imInTheScatternet && !imABridge)
+                        else if(!isServer && !imInTheScatternet && !imABridge && !imConnecting && connected)
                         {
+                            //resetConnection();
+                            Log.e(TAG, "Entered !ImABridge && !imInTheScatternet ");
+                            emitSignal("on_disconnected", tempSocket.getRemoteDevice().getAddress(), myUuid);
+                        }
+                        else if(isServer && !imInTheScatternet && !imABridge && !imConnecting && connected)
+                        {
+                            Log.e(TAG, "Entered !ImABridge && !imInTheScatternet ");
                             emitSignal("on_disconnected", tempSocket.getRemoteDevice().getAddress(), myUuid);
                         }
 
-                        if (!isServer)
+                        if (!isServer && !imABridge)
                         {
                             connected = false;
                         }
@@ -1239,35 +1364,47 @@ public class GodotBlueTooth extends GodotPlugin {
                     }
                  //   GodotLib.calldeferred(instanceId, "_on_disconnected", new Object[]{tempSocket.getRemoteDevice().getAddress()});
                     //Log.e(TAG, "localhandler error");
-                    if (currentConnections.size() > 0 && !isFromResetConnection)
-                    {
-                        currentConnections.remove(tempSocket.getRemoteDevice().getAddress());
-                    }
-                    if (scatternetConnections.size() > 0 && !isFromResetConnection)
-                    {
-                        scatternetConnections.remove(tempSocket.getRemoteDevice().getAddress());
-                    }
-                    try
-                    {
-                        if (tempSocket != null)
+
+                    int wait_time = 500;
+
+                    Handler handler = new Handler(Looper.getMainLooper());
+                    handler.postDelayed(() -> {
+                        if (currentConnections.size() > 0 && !isFromResetConnection)
                         {
-                            if (tempSocket.getInputStream() != null)
+                            if (currentConnections.containsKey(tempSocket.getRemoteDevice().getAddress()))
                             {
-                                tempSocket.getInputStream().close();
+                                currentConnections.remove(tempSocket.getRemoteDevice().getAddress());
+                                if (!tempSocket.getRemoteDevice().getAddress().equals(socketBridgeAddress))
+                                    countConnectedToServerOrABridge -= 1;
                             }
-                            if (tempSocket.getOutputStream() != null)
-                            {
-                                tempSocket.getOutputStream().close();
-                            }
-                            tempSocket.close();
                         }
+                        if (scatternetConnections.size() > 0 && !isFromResetConnection)
+                        {
+                            scatternetConnections.remove(tempSocket.getRemoteDevice().getAddress());
+                        }
+                        try
+                        {
+                            if (tempSocket != null)
+                            {
+                                if (tempSocket.getInputStream() != null)
+                                {
+                                    tempSocket.getInputStream().close();
+                                }
+                                if (tempSocket.getOutputStream() != null)
+                                {
+                                    tempSocket.getOutputStream().close();
+                                }
+                                tempSocket.close();
+                            }
 //                            tempSocket = null;
-                        //Log.e(TAG, "Closed socket");
-                    }
-                    catch (Exception e)
-                    {
-                        //Log.e(TAG, "Closing connected socket error");
-                    }
+                            //Log.e(TAG, "Closed socket");
+                        }
+                        catch (Exception e)
+                        {
+                            //Log.e(TAG, "Closing connected socket error");
+                        }
+
+                    }, wait_time);
 //                    try
 //                                        {
 ////                        mmInStream.close();
@@ -1281,12 +1418,26 @@ public class GodotBlueTooth extends GodotPlugin {
 //                        //Log.e(TAG, "Closing connected socket error");
 //                    }
                     //resetConnection();
-                    if (imInTheScatternet && !isFromResetConnection)
+                    Log.e(TAG, "Reconnecting...."+tempSocket.getRemoteDevice().getAddress().equals(socketBridgeAddress) +" imInTheScatternet "+ imInTheScatternet +" isFromResetConnection "+isFromResetConnection +" isServer "+isServer +" imConnectedToABridge "+ imConnectedToABridge +" imConnecting "+ imConnecting);
+                    if (imInTheScatternet && !isFromResetConnection && !isServer && imConnectedToABridge && !imConnecting)
                     {
-                        createSocket(serverBluetoothAddress);
-                        emitSignal("on_connected", serverBluetoothName, serverBluetoothAddress);
-                        connected = true;
-                        imInTheScatternet = false;
+                        Log.e(TAG, "Reconnecting....");
+                        Random rand = new Random();
+                        int wait_time2 = 1000 + rand.nextInt(500) + rand.nextInt(500);
+                        imConnectedToABridge = false;
+                        mustNotDeconnect = true;
+                        mustResetVars = true;
+                        resetConnection();
+                        Handler handler2 = new Handler(Looper.getMainLooper());
+                        handler2.postDelayed(() -> {
+                            createSocket(serverBluetoothAddress);
+                            //emitSignal("
+                            // ", serverBluetoothName, serverBluetoothAddress);
+                            connected = true;
+                            imInTheScatternet = false;
+                            imABridge = false;
+                            imConnecting = true;
+                        }, wait_time2);
                     }
                     break;
                 }

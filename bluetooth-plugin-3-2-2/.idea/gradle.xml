@@ -16,7 +16,6 @@
             <option value="$PROJECT_DIR$/godot-lib.release" />
             <option value="$PROJECT_DIR$/godotAdmob" />
             <option value="$PROJECT_DIR$/godotbluetooth" />
-            <option value="$PROJECT_DIR$/godotlock" />
             <option value="$PROJECT_DIR$/godotnfc" />
             <option value="$PROJECT_DIR$/oscp5" />
           </set>
