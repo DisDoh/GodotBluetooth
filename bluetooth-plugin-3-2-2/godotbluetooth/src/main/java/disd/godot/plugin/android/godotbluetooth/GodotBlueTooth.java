@@ -187,6 +187,19 @@ public class GodotBlueTooth extends GodotPlugin {
     @UsedByGodot
     public void init(final boolean newBluetoothRequired) {
         if (!initialized) {
+            //Reset vars at init()
+//            imConnecting = false;
+//            hasAlreadyBeenThere = false;
+//            mustNotDeconnect = false;
+//            countConnectedToServerOrABridge = 0;
+//            isFromResetConnection = false;
+//            imConnectedToABridge = false;
+//            firstConnectToTheBridge = true;
+//            imABridge = false;
+//            imInTheScatternet = false;
+//            connected = false;
+//            pairedDevicesListed = false;
+
             myUuid = setUuid(activity.getBaseContext()).split("-")[0];
             activity.runOnUiThread(new Runnable() {
                 @Override
@@ -781,6 +794,7 @@ public class GodotBlueTooth extends GodotPlugin {
             }
             if (mustResetVars)
             {
+                imConnecting = false;
                 hasAlreadyBeenThere = false;
                 mustNotDeconnect = false;
                 countConnectedToServerOrABridge = 0;
@@ -1395,6 +1409,7 @@ public class GodotBlueTooth extends GodotPlugin {
                                     tempSocket.getOutputStream().close();
                                 }
                                 tempSocket.close();
+                                cThreadClient = null;
                             }
 //                            tempSocket = null;
                             //Log.e(TAG, "Closed socket");
