@@ -10,6 +10,7 @@ import android.os.VibrationEffect;
 import org.godotengine.godot.Godot;
 import org.godotengine.godot.plugin.GodotPlugin;
 import org.godotengine.godot.plugin.SignalInfo;
+import org.godotengine.godot.plugin.UsedByGodot;
 
 import androidx.annotation.NonNull;
 import androidx.collection.ArraySet;
@@ -44,12 +45,12 @@ public class GodotVibration extends GodotPlugin {
         return "GodotVibration";
     }
 
-    @NonNull
-    @Override
-    public List<String> getPluginMethods() {
-        return Arrays.asList(
-                "vibrate");
-    }
+//    @NonNull
+//    @Override
+//    public List<String> getPluginMethods() {
+//        return Arrays.asList(
+//                "vibrate");
+//    }
 
     @NonNull
     @Override
@@ -59,7 +60,7 @@ public class GodotVibration extends GodotPlugin {
     }
     /* Methods
      * ********************************************************************** */
-
+    @UsedByGodot
     public void vibrate(int duration, int amplitude) {
         if (vibrator.hasVibrator()) {
             if (Build.VERSION.SDK_INT >= 26) {

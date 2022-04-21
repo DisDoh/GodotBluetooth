@@ -17,7 +17,7 @@ android {
 
     libraryVariants.all { variant ->
         variant.outputs.all { output ->
-            output.outputFileName = "GodotAdMob.$pluginVersionName.${variant.name}.aar"
+            output.outputFileName = "GodotAdMob.aar"
         }
     }
 
