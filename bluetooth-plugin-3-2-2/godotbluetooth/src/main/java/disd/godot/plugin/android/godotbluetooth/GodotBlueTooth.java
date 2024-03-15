@@ -1,11 +1,17 @@
 package disd.godot.plugin.android.godotbluetooth;
 
+import static androidx.core.app.ActivityCompat.requestPermissions;
+
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -44,6 +50,8 @@ import android.bluetooth.BluetoothServerSocket;
 
 import androidx.annotation.NonNull;
 import androidx.collection.ArraySet;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import disd.godot.plugin.android.oscP5.OscMessage;
 
@@ -176,6 +184,8 @@ public class GodotBlueTooth extends GodotPlugin {
         signals.add(new SignalInfo("on_received_connection", String.class, String.class));
         signals.add(new SignalInfo("on_getting_uuid", String.class));
         signals.add(new SignalInfo("on_devices_found", Object.class, Object.class));
+        signals.add(new SignalInfo("on_request_granted"));
+        signals.add(new SignalInfo("on_request_not_granted"));
 
         return signals;
     }
@@ -202,6 +212,7 @@ public class GodotBlueTooth extends GodotPlugin {
 
             myUuid = setUuid(activity.getBaseContext()).split("-")[0];
             activity.runOnUiThread(new Runnable() {
+                @SuppressLint("MissingPermission")
                 @Override
                 public void run() {
                     localBluetooth = BluetoothAdapter.getDefaultAdapter();
@@ -552,10 +563,10 @@ public class GodotBlueTooth extends GodotPlugin {
      */
 
     private void nativeLayoutDialogBox() {
-        String localDeviceName = localBluetooth.getName();
+        @SuppressLint("MissingPermission") String localDeviceName = localBluetooth.getName();
         String localDeviceAddress = localBluetooth.getAddress();
 
-        Set<BluetoothDevice> pairedDevices = localBluetooth.getBondedDevices();
+        @SuppressLint("MissingPermission") Set<BluetoothDevice> pairedDevices = localBluetooth.getBondedDevices();
 
         if (pairedDevices.size() > 0) {
             pairedDevicesAvailable = (Object[]) pairedDevices.toArray();
@@ -563,7 +574,7 @@ public class GodotBlueTooth extends GodotPlugin {
             List<String> externalDeviceInfo = new ArrayList<String>();
 
             for (BluetoothDevice device : pairedDevices) {
-                String externalDeviceName = device.getName();
+                @SuppressLint("MissingPermission") String externalDeviceName = device.getName();
                 String externalDeviceAddress = device.getAddress();
 
                 externalDeviceInfo.add(externalDeviceName + "\n" + externalDeviceAddress);
@@ -590,12 +601,13 @@ public class GodotBlueTooth extends GodotPlugin {
      * Organizes and sends to Godot all external paired devices
      */
 
+    @SuppressLint("MissingPermission")
     private void listPairedDevices() {
 
-        String localDeviceName = localBluetooth.getName();
+        @SuppressLint("MissingPermission") String localDeviceName = localBluetooth.getName();
         String localDeviceAddress = localBluetooth.getAddress();
 
-        Set<BluetoothDevice> pairedDevices = localBluetooth.getBondedDevices();
+        @SuppressLint("MissingPermission") Set<BluetoothDevice> pairedDevices = localBluetooth.getBondedDevices();
 
         if (pairedDevices.size() > 0) {
             pairedDevicesAvailable = (Object[]) pairedDevices.toArray();
@@ -629,6 +641,7 @@ public class GodotBlueTooth extends GodotPlugin {
     public void connect(final int newExternalDeviceID) {
         if (initialized && pairedDevicesListed) {
             activity.runOnUiThread(new Runnable() {
+                @SuppressLint("MissingPermission")
                 @Override
                 public void run() {
                     if (!connected) {
@@ -817,6 +830,7 @@ public class GodotBlueTooth extends GodotPlugin {
      * Creates the Socket to communicate with another device and establishes the connection
      */
 
+    @SuppressLint("MissingPermission")
     private BluetoothSocket createSocket (String MAC) {
 
         remoteBluetooth = localBluetooth.getRemoteDevice(MAC);
@@ -1015,8 +1029,9 @@ public class GodotBlueTooth extends GodotPlugin {
                     //Log.e(TAG, "Concurrent Error " + e);
                 }
             } else {
-                if (cThreadClient != null)
-                cThreadClient.sendMsgThread(dataBytesToSend);
+                if (cThreadClient != null) {
+                    cThreadClient.sendMsgThread(dataBytesToSend);
+                }
             }
         }
         else {
@@ -1032,8 +1047,9 @@ public class GodotBlueTooth extends GodotPlugin {
                 }
             }
             else {
-                if (cThreadClient != null)
-                cThreadClient.sendMsgThread(dataBytesToSend);
+                if (cThreadClient != null){
+                    cThreadClient.sendMsgThread(dataBytesToSend);
+                }
             }
         }
     }
@@ -1068,6 +1084,60 @@ public class GodotBlueTooth extends GodotPlugin {
         out.write(id.getBytes());
         out.close();
     }
+
+    @UsedByGodot
+    private void requestPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            String bluetoothConnect = Manifest.permission.BLUETOOTH_CONNECT;
+            if (ActivityCompat.checkSelfPermission(activity, bluetoothConnect) == PackageManager.PERMISSION_GRANTED) {
+                // You can use the API that requires the permission.
+                emitSignal("on_request_granted");
+
+            } else if (ActivityCompat.shouldShowRequestPermissionRationale(
+                    activity, bluetoothConnect)) {
+                // In an educational UI, explain to the user why your app requires this
+                // permission for a specific feature to behave as expected, and what
+                // features are disabled if it's declined. In this UI, include a
+                // "cancel" or "no thanks" button that lets the user continue
+                // using your app without granting the permission.
+                //emitSignal("on_request_granted");
+            } else {
+                // You can directly ask for the permission.
+                requestPermissions(activity,
+                        new String[]{bluetoothConnect},
+                        REQUEST_ENABLE_BT);
+            }
+        }
+        else{
+            emitSignal("on_request_granted");
+        }
+    }
+    @Override
+    public void onMainRequestPermissionsResult(int requestCode, String[] permissions,
+                                           int[] grantResults) {
+        switch (requestCode) {
+            case REQUEST_ENABLE_BT:
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0 &&
+                        grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Permission is granted. Continue the action or workflow
+                    // in your app.
+                    emitSignal("on_request_granted");
+                }  else {
+                    // Explain to the user that the feature is unavailable because
+                    // the feature requires a permission that the user has denied.
+                    // At the same time, respect the user's decision. Don't link to
+                    // system settings in an effort to convince the user to change
+                    // their decision.
+                    emitSignal("on_request_not_granted");
+                }
+                return;
+        }
+        // Other 'case' lines to check for other
+        // permissions this app might request.
+    }
+
+    @SuppressLint("MissingPermission")
     @UsedByGodot
     public String getDeviceName()
     {
@@ -1103,6 +1173,7 @@ public class GodotBlueTooth extends GodotPlugin {
         private final BluetoothServerSocket mmServerSocket;
         //private ConnectedThread tempThreadServer;
 
+        @SuppressLint("MissingPermission")
         public AcceptThread() {
             // Use a temporary object that is later assigned to mmServerSocket
             // because mmServerSocket is final.

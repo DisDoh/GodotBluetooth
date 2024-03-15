@@ -2,6 +2,7 @@
     package="disd.godot.plugin.android.godotbluetooth">
 
     <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.INTERNET" />
     <application>
         <meta-data

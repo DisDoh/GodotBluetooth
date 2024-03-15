@@ -1,13 +1,16 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 30
-    buildToolsVersion "30.0.3"
-
+    compileSdkVersion 33
     packagingOptions {
-        // exclude ARMEABI native so file, ARMEABI has been removed in NDK r17.
-        exclude "lib/armeabi/**"
+        jniLibs {
+            excludes += ['lib/armeabi/**']
+        }
+        resources {
+            excludes += ['lib/armeabi/**']
+        }
     }
+
     gradle.projectsEvaluated {
         tasks.withType(JavaCompile) {
             options.compilerArgs << "-Xlint:deprecation"
@@ -15,7 +18,7 @@ android {
     }
     defaultConfig {
         minSdkVersion 18
-        targetSdkVersion 30
+        targetSdkVersion 33
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles 'consumer-rules.pro'
@@ -33,6 +36,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    namespace 'org.godotengine.godotvibration'
 
 }
 

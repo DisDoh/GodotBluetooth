@@ -3,11 +3,15 @@ apply plugin: 'com.android.library'
 android {
     compileSdkVersion 30
     buildToolsVersion "30.0.3"
-
     packagingOptions {
-        // exclude ARMEABI native so file, ARMEABI has been removed in NDK r17.
-        exclude "lib/armeabi/**"
+        jniLibs {
+            excludes += ['lib/armeabi/**']
+        }
+        resources {
+            excludes += ['lib/armeabi/**']
+        }
     }
+
     gradle.projectsEvaluated {
         tasks.withType(JavaCompile) {
             options.compilerArgs << "-Xlint:deprecation"
@@ -33,6 +37,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    namespace 'ch.disd.godotnfc'
 
 }
 
