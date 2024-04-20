@@ -23,11 +23,6 @@ import android.nfc.NdefMessage;
 import android.nfc.Tag;
 import android.os.Parcelable;
 import android.util.Log;
-import android.view.View;
-import org.godotengine.godot.Godot;
-import org.godotengine.godot.plugin.GodotPlugin;
-import org.godotengine.godot.plugin.SignalInfo;
-
 
 public class GodotNFC extends GodotPlugin {
 

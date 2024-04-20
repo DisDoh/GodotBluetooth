@@ -205,6 +205,57 @@ public class GodotAdMob extends GodotPlugin {
      *
      * @param id AdMod Rewarded video ID
      */
+    @UsedByGodot
+    public void loadRewardedVideo(final String id) {
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                rewardedVideo = new RewardedVideo(activity, new RewardedVideoListener() {
+                    @Override
+                    public void onRewardedVideoLoaded() {
+                        emitSignal("on_rewarded_video_ad_loaded");
+                    }
+
+                    @Override
+                    public void onRewardedVideoFailedToLoad(int errorCode) {
+                        emitSignal("on_rewarded_video_ad_failed_to_load", errorCode);
+                    }
+
+                    @Override
+                    public void onRewardedVideoLeftApplication() {
+                        emitSignal("on_rewarded_video_ad_left_application");
+                    }
+
+                    @Override
+                    public void onRewardedVideoOpened() {
+                        emitSignal("on_rewarded_video_ad_opened");
+                    }
+
+                    @Override
+                    public void onRewardedVideoClosed() {
+                        emitSignal("on_rewarded_video_ad_closed");
+                    }
+
+                    @Override
+                    public void onRewarded(String type, int amount) {
+                        emitSignal("on_rewarded", type, amount);
+                    }
+
+                    @Override
+                    public void onRewardedVideoStarted() {
+                        emitSignal("on_rewarded_video_started");
+                    }
+
+                    @Override
+                    public void onRewardedVideoCompleted() {
+                        emitSignal("on_rewarded_video_completed");
+                    }
+                });
+                rewardedVideo.load(id, getAdRequest());
+            }
+        });
+    }
+
     /**
      * Show a Rewarded Video
      */

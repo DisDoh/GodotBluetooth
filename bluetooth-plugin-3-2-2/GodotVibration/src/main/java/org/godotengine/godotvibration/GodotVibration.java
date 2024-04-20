@@ -24,7 +24,7 @@ import java.util.Set;
  */
 
 public class GodotVibration extends GodotPlugin {
-    private Vibrator vibrator;
+    private final Vibrator vibrator;
     protected Activity activity = null;
 
 
@@ -35,6 +35,7 @@ public class GodotVibration extends GodotPlugin {
     public GodotVibration(Godot godot) {
         super(godot);
         activity = getActivity();;
+        assert activity != null;
         vibrator = (Vibrator) activity.getSystemService(Context.VIBRATOR_SERVICE);
 
     }
@@ -55,8 +56,7 @@ public class GodotVibration extends GodotPlugin {
     @NonNull
     @Override
     public Set<SignalInfo> getPluginSignals() {
-        Set<SignalInfo> signals = new ArraySet<>();
-        return signals;
+        return new ArraySet<>();
     }
     /* Methods
      * ********************************************************************** */
