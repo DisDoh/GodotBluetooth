@@ -1,11 +1,15 @@
 package disd.godot.plugin.android.godotbluetooth;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -43,7 +47,10 @@ import org.godotengine.godot.plugin.UsedByGodot;
 import android.bluetooth.BluetoothServerSocket;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.collection.ArraySet;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import disd.godot.plugin.android.oscP5.OscMessage;
 
@@ -54,6 +61,7 @@ import disd.godot.plugin.android.oscP5.OscMessage;
 
 public class GodotBlueTooth extends GodotPlugin {
 
+    private static final int REQUEST_BLUETOOTH_PERMISSION = 2;
     protected Activity activity = null;
 
     private boolean initialized = false;
@@ -99,10 +107,10 @@ public class GodotBlueTooth extends GodotPlugin {
     private boolean secondPart = false;
     private boolean thirdPart = false;
 
-    private String newMsg[];
+    private String[] newMsg;
     public int firstLimit = 90;
-    public int secondLimit = (int) (2 * firstLimit);
-    public int thirdLimit = (int) (3 * firstLimit);
+    public int secondLimit = 2 * firstLimit;
+    public int thirdLimit = 3 * firstLimit;
     public int msgIncr = 0;
     public int msgIncrReceived = 0;
     //UUID myUuid = UUID.randomUUID();
@@ -117,14 +125,16 @@ public class GodotBlueTooth extends GodotPlugin {
     private boolean isComingfromServer = false;
     //    private boolean emitedSignalConnected = false;
     private boolean firstConnectToTheBridge = true;
-    private int bridgeNumberFromServer = 0;
-    private int incrBridgeNumber = 0;
+    private final int bridgeNumberFromServer = 0;
+    private final int incrBridgeNumber = 0;
     private boolean isFromResetConnection = false;
     private int countConnectedToServerOrABridge = 0;
     private boolean imConnectedToABridge = false;
     private boolean imConnecting = false;
     private boolean mustResetVars = true;
     private boolean hasAlreadyBeenThere = false;
+
+
     /* Methods
      * ********************************************************************** */
 
@@ -135,7 +145,7 @@ public class GodotBlueTooth extends GodotPlugin {
 
     public GodotBlueTooth(Godot godot) {
         super(godot);
-        activity = getActivity();
+        this.activity = godot.getActivity();
         localHandler = null;
     }
 
@@ -176,7 +186,8 @@ public class GodotBlueTooth extends GodotPlugin {
         signals.add(new SignalInfo("on_received_connection", String.class, String.class));
         signals.add(new SignalInfo("on_getting_uuid", String.class));
         signals.add(new SignalInfo("on_devices_found", Object.class, Object.class));
-
+        signals.add(new SignalInfo("on_request_granted"));
+        signals.add(new SignalInfo("on_request_not_granted"));
         return signals;
     }
 
@@ -227,7 +238,7 @@ public class GodotBlueTooth extends GodotPlugin {
                             byte[] msgByte = (byte[]) msgReceived.obj;
                             Log.e(TAG, "MsgByte Length: " + msgByte.length);
                             KetaiOSCMessage m = new KetaiOSCMessage(msgByte);
-                            Log.e(TAG, "MsgByte data: " + m.toString());
+                            Log.e(TAG, "MsgByte data: " + m);
                             if (msgByte.length < 640) {
                                 //Log.e(TAG,  "Msg m: \n" + m);
                                 if (m.isValid()) {
@@ -236,13 +247,9 @@ public class GodotBlueTooth extends GodotPlugin {
                                     if (!secondPart && !thirdPart) {
                                         msgIncrReceived = Integer.parseInt(String.valueOf(m.get(0)));
                                         newMsg = new String[msgIncrReceived];
-                                        Log.e(TAG, "I'm a Bridge " + String.valueOf(imABridge));
-                                        Log.e(TAG, "I'm in the Scatternet " + String.valueOf(imInTheScatternet));
-                                        if (String.valueOf(m.get(1)).equals(serverUuid)) {
-                                            isComingfromServer = true;
-                                        } else {
-                                            isComingfromServer = false;
-                                        }
+                                        Log.e(TAG, "I'm a Bridge " + imABridge);
+                                        Log.e(TAG, "I'm in the Scatternet " + imInTheScatternet);
+                                        isComingfromServer = String.valueOf(m.get(1)).equals(serverUuid);
 
                                     }
                                     if (msgIncrReceived <= firstLimit) {
@@ -395,7 +402,7 @@ public class GodotBlueTooth extends GodotPlugin {
                                             imInTheScatternet = true;
                                             connected = true;
                                             imConnecting = false;
-                                            Log.e(TAG, "Connected to a Bridge of Scatternet " + String.valueOf(m.get(3)));
+                                            Log.e(TAG, "Connected to a Bridge of Scatternet " + m.get(3));
 
                                         }, 1000);
                                     }
@@ -485,10 +492,37 @@ public class GodotBlueTooth extends GodotPlugin {
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.S)
+    @UsedByGodot
+    public void requestPermission() {
+
+        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_DENIED)
+        {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            {
+                ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.BLUETOOTH_CONNECT}, REQUEST_BLUETOOTH_PERMISSION);
+            }
+            else {
+                emitSignal("on_request_granted");
+            }
+        }
+    }
+
+    @Override
+    public void onMainRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onMainRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_BLUETOOTH_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                emitSignal("on_request_granted");
+            } else {
+                emitSignal("on_request_not_granted");
+            }
+        }
+    }
     /**
      * The Class KetaiOSCMessage.
      */
-    public class KetaiOSCMessage extends OscMessage {
+    public static class KetaiOSCMessage extends OscMessage {
 
         /**
          * Instantiates a new ketai osc message.
@@ -558,7 +592,7 @@ public class GodotBlueTooth extends GodotPlugin {
         Set<BluetoothDevice> pairedDevices = localBluetooth.getBondedDevices();
 
         if (pairedDevices.size() > 0) {
-            pairedDevicesAvailable = (Object[]) pairedDevices.toArray();
+            pairedDevicesAvailable = pairedDevices.toArray();
 
             List<String> externalDeviceInfo = new ArrayList<String>();
 
@@ -570,7 +604,6 @@ public class GodotBlueTooth extends GodotPlugin {
             }
             externalDevicesDialogAux = new String[externalDeviceInfo.size()];
             externalDevicesDialogAux = externalDeviceInfo.toArray(new String[externalDeviceInfo.size()]);
-            ;
         }
 
         AlertDialog.Builder builder = new AlertDialog.Builder(activity);
@@ -598,7 +631,7 @@ public class GodotBlueTooth extends GodotPlugin {
         Set<BluetoothDevice> pairedDevices = localBluetooth.getBondedDevices();
 
         if (pairedDevices.size() > 0) {
-            pairedDevicesAvailable = (Object[]) pairedDevices.toArray();
+            pairedDevicesAvailable = pairedDevices.toArray();
             int externalTotDeviceID = 0;
 
             String[] externalDeviceName = new String[pairedDevices.size()];
@@ -911,11 +944,11 @@ public class GodotBlueTooth extends GodotPlugin {
                 public void run() {
                     if (connected && !imConnecting) {
                         isComingfromServer = false;
-                        Log.e(TAG, "Sending msg ..." + String.valueOf(msgTemp));
+                        Log.e(TAG, "Sending msg ..." + msgTemp);
 //                            sizeArrayToSendBeforeSend = new OscMessage("sizeArray");
 //                            sizeArrayToSendBeforeSend.add(msgIncr);
 //                            final byte[] sizeArrayBytesToSend = sizeArrayToSendBeforeSend.getBytes();
-                        Log.e(TAG, "MsgIncr : " + String.valueOf(msgIncr));
+                        Log.e(TAG, "MsgIncr : " + msgIncr);
                         if (msgIncr <= firstLimit) {
                             msg = new OscMessage("string");
                             msg.add(String.valueOf(msgIncr));
@@ -995,6 +1028,7 @@ public class GodotBlueTooth extends GodotPlugin {
             });
         }
     }
+    @SuppressLint("SuspiciousIndentation")
     public void sendDataByte()
     {
         if (!localBluetooth.isEnabled()) {
@@ -1015,8 +1049,9 @@ public class GodotBlueTooth extends GodotPlugin {
                     //Log.e(TAG, "Concurrent Error " + e);
                 }
             } else {
-                if (cThreadClient != null)
-                cThreadClient.sendMsgThread(dataBytesToSend);
+                if (cThreadClient != null) {
+                    cThreadClient.sendMsgThread(dataBytesToSend);
+                }
             }
         }
         else {

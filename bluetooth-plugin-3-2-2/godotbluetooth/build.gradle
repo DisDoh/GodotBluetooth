@@ -1,8 +1,8 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 30
-    buildToolsVersion "30.0.3"
+    compileSdkVersion 34
+
     packagingOptions {
         jniLibs {
             excludes += ['lib/armeabi/**']
@@ -13,20 +13,22 @@ android {
     }
 
     gradle.projectsEvaluated {
-        tasks.withType(JavaCompile) {
-            options.compilerArgs << "-Xlint:deprecation"
+        tasks.withType(JavaCompile).tap {
+            configureEach {
+                options.compilerArgs << "-Xlint:deprecation"
+            }
         }
     }
     defaultConfig {
-        minSdkVersion 18
-        targetSdkVersion 30
+        minSdkVersion 21
+
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles 'consumer-rules.pro'
     }
 
-    libraryVariants.all { variant ->
-        variant.outputs.all { output ->
+    libraryVariants.configureEach { variant ->
+        variant.outputs.configureEach { output ->
             output.outputFileName = "GodotBlueTooth.aar"
         }
     }
@@ -44,14 +46,14 @@ android {
 dependencies {
   //  implementation fileTree(dir: 'libs', include: ['*.jar'])
  //   implementation files('libs/oscP5.jar')
-    implementation 'androidx.annotation:annotation:1.2.0'
-    implementation 'androidx.collection:collection:1.1.0'
+    implementation 'androidx.annotation:annotation:1.8.0'
+    implementation 'androidx.collection:collection:1.4.0'
     implementation 'androidx.legacy:legacy-support-v13:1.0.0'
   //  implementation project(path: ':oscp5')
 
     compileOnly project(':godot-lib.release')
 
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
