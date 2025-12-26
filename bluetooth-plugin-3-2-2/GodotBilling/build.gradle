@@ -1,22 +1,16 @@
-apply plugin: 'com.android.library'
-
-ext.pluginVersionCode = 4
-ext.pluginVersionName = "5.0.0"
+plugins {
+    id 'com.android.library'
+}
 
 android {
+    namespace = 'ch.disd.godotbiling'
     compileSdk = 36
 
     defaultConfig {
-        minSdkVersion 16
+        minSdk = 24
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles 'consumer-rules.pro'
-    }
-
-    libraryVariants.all { variant ->
-        variant.outputs.all { output ->
-            output.outputFileName = "GodotAdMob.aar"
-        }
+        consumerProguardFiles "consumer-rules.pro"
     }
 
     buildTypes {
@@ -25,17 +19,17 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-    namespace = 'disd.godot.plugin.android.godotAdMob'
-
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
-    compileOnly project(':godot-lib.release')
-    implementation 'com.google.android.gms:play-services-ads:24.4.0'
-
+    compileOnly fileTree(dir: '../godot-lib.release/', include: ['godot-lib*.aar'])
     implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'com.android.billingclient:billing:8.0.0'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'

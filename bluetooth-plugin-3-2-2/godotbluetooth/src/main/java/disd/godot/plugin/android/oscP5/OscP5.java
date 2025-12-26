@@ -93,7 +93,7 @@ public class OscP5 implements Observer {
 	private OscProperties _myOscProperties;
 	private Method _myEventMethod;
 	private Method _myPacketMethod;
-	private Class< ? > _myEventClass = OscMessage.class;
+	private final Class< ? > _myEventClass = OscMessage.class;
 	private boolean isEventMethod;
 	private boolean isPacketMethod;
 	private boolean isBroadcast = false;
@@ -356,7 +356,8 @@ public class OscP5 implements Observer {
 
 		if ( _myOscPlugMap.containsKey( theOscMessage.getAddress( ) ) ) {
 			List< OscPlug > myOscPlugList = _myOscPlugMap.get( theOscMessage.getAddress( ) );
-			for ( OscPlug plug : myOscPlugList ) {
+            assert myOscPlugList != null;
+            for ( OscPlug plug : myOscPlugList ) {
 				if ( !plug.isArray && plug.checkMethod( theOscMessage , false ) ) {
 					theOscMessage.isPlugged = true;
 					invoke( plug.getObject( ) , plug.getMethod( ) , theOscMessage.getArguments( ) );

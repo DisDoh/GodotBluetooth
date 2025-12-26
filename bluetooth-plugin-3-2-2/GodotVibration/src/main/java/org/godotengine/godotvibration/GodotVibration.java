@@ -6,6 +6,7 @@ import android.os.Build;
 import android.os.Vibrator;
 
 import android.os.VibrationEffect;
+import android.os.VibratorManager;
 
 import org.godotengine.godot.Godot;
 import org.godotengine.godot.plugin.GodotPlugin;
@@ -34,9 +35,15 @@ public class GodotVibration extends GodotPlugin {
 
     public GodotVibration(Godot godot) {
         super(godot);
-        activity = getActivity();;
+        activity = getActivity();
         assert activity != null;
-        vibrator = (Vibrator) activity.getSystemService(Context.VIBRATOR_SERVICE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            VibratorManager vibratorManager = (VibratorManager) activity.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+            vibrator = vibratorManager.getDefaultVibrator();
+        } else {
+            vibrator = (Vibrator) activity.getSystemService(Context.VIBRATOR_SERVICE);
+        }
 
     }
 

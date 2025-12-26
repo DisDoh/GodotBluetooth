@@ -1,4 +1,6 @@
-include ':oscp5'
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
 include ':godotAdmob'
 include ':GodotVibration'
 rootProject.name='GodotBlueTooth'
@@ -6,3 +8,4 @@ include ':app', ':godot-lib.release'
 include ':godotbluetooth'
 include ':godotnfc'
 include ':godotToast'
+include ':GodotBilling'

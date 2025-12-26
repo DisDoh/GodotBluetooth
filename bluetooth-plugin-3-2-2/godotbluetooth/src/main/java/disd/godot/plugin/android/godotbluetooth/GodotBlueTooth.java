@@ -6,8 +6,10 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Handler;
@@ -52,7 +54,9 @@ import androidx.collection.ArraySet;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import disd.godot.plugin.android.netP5.Bytes;
 import disd.godot.plugin.android.oscP5.OscMessage;
+import disd.godot.plugin.android.oscP5.OscPacket;
 
 /**
  * Created by Rodrigo Favarete, Mad Forest Games' Lead Game Developer, on September 8, 2017
@@ -191,7 +195,6 @@ public class GodotBlueTooth extends GodotPlugin {
         return signals;
     }
 
-
     /**
      * Initialize the Module
      */
@@ -215,7 +218,9 @@ public class GodotBlueTooth extends GodotPlugin {
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    localBluetooth = BluetoothAdapter.getDefaultAdapter();
+                    BluetoothManager bluetoothManager = (BluetoothManager) activity.getBaseContext().getSystemService(Context.BLUETOOTH_SERVICE);
+
+                    localBluetooth = bluetoothManager.getAdapter();
                     if (localBluetooth == null) {
                         //Log.e(TAG, "ERROR: Bluetooth Adapter not found!");
                         activity.finish();
@@ -233,7 +238,7 @@ public class GodotBlueTooth extends GodotPlugin {
                     initialized = true;
                     localHandler = new Handler(Looper.getMainLooper()) {
                         @Override
-                        public void handleMessage(Message msgReceived) {
+                        public void handleMessage(@NonNull Message msgReceived) {
 
                             byte[] msgByte = (byte[]) msgReceived.obj;
                             Log.e(TAG, "MsgByte Length: " + msgByte.length);
@@ -495,22 +500,19 @@ public class GodotBlueTooth extends GodotPlugin {
     @RequiresApi(api = Build.VERSION_CODES.S)
     @UsedByGodot
     public void requestPermission() {
-
-        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_DENIED)
-        {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-            {
+        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_DENIED) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.BLUETOOTH_CONNECT}, REQUEST_BLUETOOTH_PERMISSION);
-            }
-            else {
+            } else {
                 emitSignal("on_request_granted");
             }
+        } else {
+            emitSignal("on_request_granted");
         }
     }
 
     @Override
     public void onMainRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onMainRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_BLUETOOTH_PERMISSION) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 emitSignal("on_request_granted");
@@ -586,12 +588,10 @@ public class GodotBlueTooth extends GodotPlugin {
      */
 
     private void nativeLayoutDialogBox() {
-        String localDeviceName = localBluetooth.getName();
-        String localDeviceAddress = localBluetooth.getAddress();
 
         Set<BluetoothDevice> pairedDevices = localBluetooth.getBondedDevices();
 
-        if (pairedDevices.size() > 0) {
+        if (!pairedDevices.isEmpty()) {
             pairedDevicesAvailable = pairedDevices.toArray();
 
             List<String> externalDeviceInfo = new ArrayList<String>();
@@ -625,12 +625,9 @@ public class GodotBlueTooth extends GodotPlugin {
 
     private void listPairedDevices() {
 
-        String localDeviceName = localBluetooth.getName();
-        String localDeviceAddress = localBluetooth.getAddress();
-
         Set<BluetoothDevice> pairedDevices = localBluetooth.getBondedDevices();
 
-        if (pairedDevices.size() > 0) {
+        if (!pairedDevices.isEmpty()) {
             pairedDevicesAvailable = pairedDevices.toArray();
             int externalTotDeviceID = 0;
 
@@ -901,7 +898,11 @@ public class GodotBlueTooth extends GodotPlugin {
         //myUuid = myUuidFromGodot;
         return myUuid;
     }
+    @UsedByGodot
+    private boolean isEnabled () {
 
+        return localBluetooth.isEnabled();
+    }
     @UsedByGodot
     private int getIfImInAScatternet () {
 
@@ -1028,7 +1029,8 @@ public class GodotBlueTooth extends GodotPlugin {
             });
         }
     }
-    @SuppressLint("SuspiciousIndentation")
+
+
     public void sendDataByte()
     {
         if (!localBluetooth.isEnabled()) {
@@ -1067,8 +1069,7 @@ public class GodotBlueTooth extends GodotPlugin {
                 }
             }
             else {
-                if (cThreadClient != null)
-                cThreadClient.sendMsgThread(dataBytesToSend);
+                if (cThreadClient != null) cThreadClient.sendMsgThread(dataBytesToSend);
             }
         }
     }
@@ -1108,11 +1109,43 @@ public class GodotBlueTooth extends GodotPlugin {
     {
         return localBluetooth.getName();
     }
+    private static final String PREF_FAKE_MAC = "fake_mac_address";
+    private static final String MAC_KEY = "mac_address";
+
     @UsedByGodot
     public String getDeviceMacAdress()
     {
-        return localBluetooth.getAddress();
+        SharedPreferences prefs = activity.getBaseContext().getSharedPreferences(PREF_FAKE_MAC, Context.MODE_PRIVATE);
+        String mac = prefs.getString(MAC_KEY, null);
+
+        if (mac == null) {
+            mac = generateRandomMacAddress();
+            prefs.edit().putString(MAC_KEY, mac).apply();
+        }
+
+        return mac;
     }
+
+    String generateRandomMacAddress() {
+        Random r = new Random();
+        byte[] macAddr = new byte[6];
+        r.nextBytes(macAddr);
+
+        // Fix the first byte to indicate locally administered and unicast
+        macAddr[0] = (byte)(macAddr[0] & (byte)254); // Unicast
+        macAddr[0] = (byte)(macAddr[0] | (byte)2);   // Locally administered
+
+        StringBuilder mac = new StringBuilder();
+        for (byte b : macAddr) {
+            mac.append(String.format("%02X:", b));
+        }
+        mac.deleteCharAt(mac.length() - 1); // Remove last colon
+
+        return mac.toString();
+    }
+
+
+
     @UsedByGodot
     public boolean isServer()
     {
@@ -1389,7 +1422,7 @@ public class GodotBlueTooth extends GodotPlugin {
                             msg.add(tempSocket.getRemoteDevice().getAddress());
                             msg.add("End");
                             Handler handler = new Handler(Looper.getMainLooper());
-                            handler.postDelayed(() -> sendDataByte() , 300);
+                            handler.postDelayed(GodotBlueTooth.this::sendDataByte, 300);
                         }
                         else if(!isServer && !imInTheScatternet && !imABridge && !imConnecting && connected)
                         {

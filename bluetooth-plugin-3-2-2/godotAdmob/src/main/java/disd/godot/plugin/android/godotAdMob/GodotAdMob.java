@@ -488,8 +488,7 @@ public class GodotAdMob extends GodotPlugin {
      */
     private String getAdMobDeviceId() {
         String android_id = Settings.Secure.getString(activity.getContentResolver(), Settings.Secure.ANDROID_ID);
-        String deviceId = md5(android_id).toUpperCase(Locale.US);
-        return deviceId;
+        return md5(android_id).toUpperCase(Locale.US);
     }
 
 }
