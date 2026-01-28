@@ -47,8 +47,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Observable;
-import java.util.Observer;
 import java.util.logging.Logger;
 
 import disd.godot.plugin.android.oscP5.OscPlug;
@@ -73,7 +71,7 @@ import disd.godot.plugin.android.oscP5.OscProperties;
  * http://forum.processing.org/two/discussion/2550/oscp5-android-cannot-send-only-receive
  * 
  */
-public class OscP5 implements Observer {
+public class OscP5 implements NetObserver {
 
 	static public boolean DEBUG = false;
 	final static Logger LOGGER = Logger.getLogger( OscP5.class.getName( ) );
@@ -179,7 +177,7 @@ public class OscP5 implements Observer {
 
 	}
 
-	public void update( Observable ob , Object map ) {
+	public void update(NetObservable ob, Object map) {
 		/* gets called when an OSC packet was received, a Map is expected as second argument. */
 		process( map );
 	}
@@ -232,7 +230,7 @@ public class OscP5 implements Observer {
 				Class< ? > childClass = Class.forName( child );
 				Class< ? > parentClass = Object.class;
 				if ( parentClass.isAssignableFrom( childClass ) ) {
-					parent = childClass.newInstance( );
+					parent = childClass.getDeclaredConstructor().newInstance();
 					parent = theObject;
 				}
 			} catch ( Exception e ) {

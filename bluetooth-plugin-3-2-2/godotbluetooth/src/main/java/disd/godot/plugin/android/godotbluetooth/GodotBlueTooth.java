@@ -690,47 +690,47 @@ public class GodotBlueTooth extends GodotPlugin {
 //
 //        Handler handler = new Handler(Looper.getMainLooper());
 //        handler.postDelayed(() -> {
-            if (cThreadClient != null) {
-                if (!mustNotDeconnect)
-                    emitSignal("on_disconnected", cThreadClient.tempSocket.getRemoteDevice().getAddress(), myUuid);
-                isFromResetConnection = true;
-                if (cThreadClient.mmInStream != null) {
-                    try {
-                        cThreadClient.mmInStream.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+        if (cThreadClient != null) {
+            if (!mustNotDeconnect)
+                emitSignal("on_disconnected", cThreadClient.tempSocket.getRemoteDevice().getAddress(), myUuid);
+            isFromResetConnection = true;
+            if (cThreadClient.mmInStream != null) {
+                try {
+                    cThreadClient.mmInStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-                if (cThreadClient.mmOutStream != null) {
-                    try {
-                        cThreadClient.mmOutStream.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-                if (cThreadClient.tempSocket != null) {
-                    try {
-                        cThreadClient.tempSocket.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-                if (cThreadClient != null)
-                {
-                    cThreadClient.interrupt();
-                    cThreadClient = null;
-                }
-                //Log.e(TAG, "reset Bluetooth Disconnected! from client");
             }
-            if (isServer || imABridge) {
-
-                isServer = false;
-                connected = false;
-                pairedDevicesListed = false;
-                if (aThread != null) {
-                    aThread.interrupt();
-                    aThread = null;
+            if (cThreadClient.mmOutStream != null) {
+                try {
+                    cThreadClient.mmOutStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
+            }
+            if (cThreadClient.tempSocket != null) {
+                try {
+                    cThreadClient.tempSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (cThreadClient != null)
+            {
+                cThreadClient.interrupt();
+                cThreadClient = null;
+            }
+            //Log.e(TAG, "reset Bluetooth Disconnected! from client");
+        }
+        if (isServer || imABridge) {
+
+            isServer = false;
+            connected = false;
+            pairedDevicesListed = false;
+            if (aThread != null) {
+                aThread.interrupt();
+                aThread = null;
+            }
 //            if(cThreadServer != null) {
 //                if (cThreadServer.mmInStream != null) {
 //                    try {
@@ -755,29 +755,29 @@ public class GodotBlueTooth extends GodotPlugin {
 //                }
 //                cThreadServer.interrupt();
 //            }
-                //Log.e(TAG, "reset Bluetooth Disconnected! from server");
-                isFromResetConnection = true;
-                for (Map.Entry<String, ConnectedThread> stringConnectedThreadEntry : currentConnections.entrySet()) {
-                    cThreadServer = stringConnectedThreadEntry.getValue();
-                    if (cThreadServer != null) {
-                        //  if (Objects.requireNonNull(currentConnections.get(item)).mmInStream != null) {
-                        try {
-                            cThreadServer.mmInStream.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        //  }
-                        //if (Objects.requireNonNull(currentConnections.get(item)).mmOutStream != null) {
-                        try {
-                            cThreadServer.mmOutStream.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        cThreadServer.interrupt();
-                        cThreadServer = null;
+            //Log.e(TAG, "reset Bluetooth Disconnected! from server");
+            isFromResetConnection = true;
+            for (Map.Entry<String, ConnectedThread> stringConnectedThreadEntry : currentConnections.entrySet()) {
+                cThreadServer = stringConnectedThreadEntry.getValue();
+                if (cThreadServer != null) {
+                    //  if (Objects.requireNonNull(currentConnections.get(item)).mmInStream != null) {
+                    try {
+                        cThreadServer.mmInStream.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    //  }
+                    //if (Objects.requireNonNull(currentConnections.get(item)).mmOutStream != null) {
+                    try {
+                        cThreadServer.mmOutStream.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    cThreadServer.interrupt();
+                    cThreadServer = null;
 //                    System.out.println(pair.getKey() + " = " + pair.getValue());
 //                    it.remove(); // avoids a ConcurrentModificationException
-                        //  }
+                    //  }
 //                if (Objects.requireNonNull(currentConnections.get(item)).tempSocket != null) {
 //                    try {
 //                        Objects.requireNonNull(currentConnections.get(item)).tempSocket.close();
@@ -786,59 +786,59 @@ public class GodotBlueTooth extends GodotPlugin {
 //                    }
 //                }
 //                Objects.requireNonNull(currentConnections.get(item)).interrupt();
-                        //currentConnections.remove(item);
-                    }
-                }
-                for (Map.Entry<String, ConnectedThread> stringConnectedThreadEntry : scatternetConnections.entrySet()) {
-                    cThreadServer = stringConnectedThreadEntry.getValue();
-                    if (cThreadServer != null) {
-                        //  if (Objects.requireNonNull(currentConnections.get(item)).mmInStream != null) {
-                        try {
-                            cThreadServer.mmInStream.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        //  }
-                        //if (Objects.requireNonNull(currentConnections.get(item)).mmOutStream != null) {
-                        try {
-                            cThreadServer.mmOutStream.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        cThreadServer.interrupt();
-                        cThreadServer = null;
-                        //                    System.out.println(pair.getKey() + " = " + pair.getValue());
-                        //                    it.remove(); // avoids a ConcurrentModificationException
-                        //  }
-                        //                if (Objects.requireNonNull(currentConnections.get(item)).tempSocket != null) {
-                        //                    try {
-                        //                        Objects.requireNonNull(currentConnections.get(item)).tempSocket.close();
-                        //                    } catch (IOException e) {
-                        //                        e.printStackTrace();
-                        //                    }
-                        //                }
-                        //                Objects.requireNonNull(currentConnections.get(item)).interrupt();
-                        //currentConnections.remove(item);
-                    }
+                    //currentConnections.remove(item);
                 }
             }
-            if (mustResetVars)
-            {
-                imConnecting = false;
-                hasAlreadyBeenThere = false;
-                mustNotDeconnect = false;
-                countConnectedToServerOrABridge = 0;
-                isFromResetConnection = false;
-                imConnectedToABridge = false;
-                firstConnectToTheBridge = true;
-                imABridge = false;
-                imInTheScatternet = false;
-                connected = false;
-                pairedDevicesListed = false;
-                currentConnections.clear();
-                scatternetConnections.clear();
-                socketConnections.clear();
+            for (Map.Entry<String, ConnectedThread> stringConnectedThreadEntry : scatternetConnections.entrySet()) {
+                cThreadServer = stringConnectedThreadEntry.getValue();
+                if (cThreadServer != null) {
+                    //  if (Objects.requireNonNull(currentConnections.get(item)).mmInStream != null) {
+                    try {
+                        cThreadServer.mmInStream.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    //  }
+                    //if (Objects.requireNonNull(currentConnections.get(item)).mmOutStream != null) {
+                    try {
+                        cThreadServer.mmOutStream.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    cThreadServer.interrupt();
+                    cThreadServer = null;
+                    //                    System.out.println(pair.getKey() + " = " + pair.getValue());
+                    //                    it.remove(); // avoids a ConcurrentModificationException
+                    //  }
+                    //                if (Objects.requireNonNull(currentConnections.get(item)).tempSocket != null) {
+                    //                    try {
+                    //                        Objects.requireNonNull(currentConnections.get(item)).tempSocket.close();
+                    //                    } catch (IOException e) {
+                    //                        e.printStackTrace();
+                    //                    }
+                    //                }
+                    //                Objects.requireNonNull(currentConnections.get(item)).interrupt();
+                    //currentConnections.remove(item);
+                }
             }
+        }
+        if (mustResetVars)
+        {
+            imConnecting = false;
+            hasAlreadyBeenThere = false;
+            mustNotDeconnect = false;
+            countConnectedToServerOrABridge = 0;
+            isFromResetConnection = false;
+            imConnectedToABridge = false;
+            firstConnectToTheBridge = true;
+            imABridge = false;
+            imInTheScatternet = false;
+            connected = false;
+            pairedDevicesListed = false;
+            currentConnections.clear();
+            scatternetConnections.clear();
+            socketConnections.clear();
+        }
 //        }, wait_time);
 
     }
@@ -937,8 +937,8 @@ public class GodotBlueTooth extends GodotPlugin {
      * Calls the method that sends data as bytes to the connected device
      */
 
-     @UsedByGodot
-     public void sendMsg(){
+    @UsedByGodot
+    public void sendMsg(){
         if (initialized) {
             activity.runOnUiThread(new Runnable() {
                 @Override
@@ -1287,17 +1287,17 @@ public class GodotBlueTooth extends GodotPlugin {
                             }
                         }
                         else
-                            {
-                                msg = new OscMessage("string");
-                                msg.add("2");
-                                msg.add(myUuid);
-                                msg.add("Emit Signal On connected");
-                                //msg.add(socketBridgeAddress);
-                                msg.add("End");
-                                cThreadServer.sendMsgThread(msg.getBytes());
-                                currentConnections.put(socketServer.getRemoteDevice().getAddress(), cThreadServer);
-                                countConnectedToServerOrABridge += 1;
-                                Log.e(TAG, "CurrentConnections " + currentConnections.toString() + "countConnectedToServerOrABridge " + countConnectedToServerOrABridge);
+                        {
+                            msg = new OscMessage("string");
+                            msg.add("2");
+                            msg.add(myUuid);
+                            msg.add("Emit Signal On connected");
+                            //msg.add(socketBridgeAddress);
+                            msg.add("End");
+                            cThreadServer.sendMsgThread(msg.getBytes());
+                            currentConnections.put(socketServer.getRemoteDevice().getAddress(), cThreadServer);
+                            countConnectedToServerOrABridge += 1;
+                            Log.e(TAG, "CurrentConnections " + currentConnections.toString() + "countConnectedToServerOrABridge " + countConnectedToServerOrABridge);
                         }
                         if(isServer) {
                             emitSignal("on_received_connection", socketServer.getRemoteDevice().getAddress(), myUuid);
@@ -1365,8 +1365,8 @@ public class GodotBlueTooth extends GodotPlugin {
                     if (!mustNotDeconnect)
                     {
                         if(imABridge
-                            && tempSocket.getRemoteDevice().getAddress().equals(serverBluetoothAddress)
-                            && !isFromResetConnection && !imConnectedToABridge)
+                                && tempSocket.getRemoteDevice().getAddress().equals(serverBluetoothAddress)
+                                && !isFromResetConnection && !imConnectedToABridge)
                         {
                             Log.e(TAG, "Entered ImABridge && tempSocket.Address == ServerAddress && !isFromResetConnection ");
 
@@ -1409,7 +1409,7 @@ public class GodotBlueTooth extends GodotPlugin {
                             }, 1000);
 
                             //Log.e(TAG, "Entered ImABridge && isFromResetConnection ");
-                           }
+                        }
                         else if (!isFromResetConnection && imABridge && !imConnecting)
                         {
                             //countConnectedToServerOrABridge -= 1;
@@ -1444,7 +1444,7 @@ public class GodotBlueTooth extends GodotPlugin {
                     else{
                         mustNotDeconnect = false;
                     }
-                 //   GodotLib.calldeferred(instanceId, "_on_disconnected", new Object[]{tempSocket.getRemoteDevice().getAddress()});
+                    //   GodotLib.calldeferred(instanceId, "_on_disconnected", new Object[]{tempSocket.getRemoteDevice().getAddress()});
                     //Log.e(TAG, "localhandler error");
 
                     int wait_time = 500;

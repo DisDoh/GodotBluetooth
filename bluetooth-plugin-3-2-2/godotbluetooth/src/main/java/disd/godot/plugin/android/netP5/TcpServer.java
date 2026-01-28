@@ -43,12 +43,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Observable;
-import java.util.Observer;
 import java.util.Set;
 import java.util.logging.Logger;
 
-public final class TcpServer extends Observable implements Transmitter {
+public final class TcpServer extends NetObservableBase implements Transmitter {
 
 	private final static Logger LOGGER = Logger.getLogger( TcpServer.class.getName( ) );
 	private Selector selector;
@@ -233,9 +231,8 @@ public final class TcpServer extends Observable implements Transmitter {
 		m.put( "socket-address" , channel.socket( ).getInetAddress( ).getHostAddress( ) );
 		m.put( "socket-port" , channel.socket( ).getPort( ) );
 		m.put( "local-port" , channel.socket( ).getLocalPort( ) );
-		setChanged( );
-		notifyObservers( m );
-	}
+		notifyObservers(m );
+}
 
 	private class Server implements Runnable {
 
@@ -331,13 +328,15 @@ public final class TcpServer extends Observable implements Transmitter {
 
 	public static void main( String[] args ) {
 		TcpServer server = new TcpServer( "127.0.0.1" , 10000 );
-		server.addObserver( new Observer( ) {
+		server.addObserver(new NetObserver() {
 
-			public void update( Observable o , Object arg ) {
-				System.out.println( "received a packet " + arg );
-			}
-		} );
-	}
+            @Override
+            public void update(NetObservable o, Object arg) {
+                System.out.println("received a packet " + arg);
+            }
+        });
+    }
+
 
 	/* Notes */
 

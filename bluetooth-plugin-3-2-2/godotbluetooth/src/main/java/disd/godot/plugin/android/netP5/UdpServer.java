@@ -38,10 +38,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Observable;
 import java.util.logging.Logger;
 
-public final class UdpServer extends Observable implements Transmitter {
+public final class UdpServer extends NetObservableBase implements Transmitter {
 
 	final static Logger LOGGER = Logger.getLogger( UdpServer.class.getName( ) );
 
@@ -169,9 +168,8 @@ public final class UdpServer extends Observable implements Transmitter {
 								m.put( "socket-port" , addr.getPort( ) );
 								m.put( "local-port" , socket.getLocalPort( ) );
 								m.put( "data" , data );
-								setChanged( );
-								notifyObservers( m );
-							}
+								notifyObservers(m );
+}
 
 						}
 

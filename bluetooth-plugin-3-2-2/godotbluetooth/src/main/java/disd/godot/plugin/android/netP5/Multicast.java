@@ -40,10 +40,9 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Observable;
 import java.util.logging.Logger;
 
-public class Multicast extends Observable implements Transmitter {
+public class Multicast extends NetObservableBase implements Transmitter {
 	
 	// http://download.java.net/jdk7/archive/b123/docs/api/java/net/MulticastSocket.html
 	// http://stackoverflow.com/questions/5072028/multicast-in-java
@@ -138,9 +137,8 @@ public class Multicast extends Observable implements Transmitter {
 							m.put( "multicast-sender" , inPacket.getAddress( ).getHostAddress( ) );
 							m.put( "multicast-port" , port );
 							m.put( "data" , data );
-							setChanged( );
-							notifyObservers( m );
-						} catch ( IOException e ) {
+							notifyObservers(m );
+} catch ( IOException e ) {
 							e.printStackTrace( );
 						}
 

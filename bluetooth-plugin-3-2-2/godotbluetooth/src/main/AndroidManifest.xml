@@ -16,6 +16,7 @@
         android:name="android.hardware.bluetooth_le"
         android:required="false" />
 
+
     <application>
         <meta-data
             android:name="org.godotengine.plugin.v1.GodotBlueTooth"

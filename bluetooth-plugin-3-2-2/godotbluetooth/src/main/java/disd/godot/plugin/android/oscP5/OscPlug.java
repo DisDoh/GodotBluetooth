@@ -138,10 +138,10 @@ public class OscPlug {
 		}
 		switch ( _myChecker ) {
 		case ( CHECK_ADDRPATTERN_TYPETAG ):
-			String thePattern = theOscMessage.addrPattern( ) + myTypetag;
+			String thePattern = theOscMessage.getAddress() + myTypetag;
 			return thePattern.equals( _myPattern );
 		case ( CHECK_ADDRPATTERN ):
-			return ( theOscMessage.addrPattern( ).equals( _myAddrPattern ) );
+			return ( theOscMessage.getAddress().equals( _myAddrPattern ) );
 		case ( CHECK_TYPETAG ):
 			return ( myTypetag.equals( _myTypetag ) );
 		default:

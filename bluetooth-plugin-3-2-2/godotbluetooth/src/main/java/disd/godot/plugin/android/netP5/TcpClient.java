@@ -40,12 +40,11 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Observable;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-public final class TcpClient extends Observable implements Runnable , Transmitter {
+public final class TcpClient extends NetObservableBase implements Runnable , Transmitter {
 
 	/* adapted from http://bobah.net/d4d/source-code/networking/tcp-client-java-nio */
 
@@ -93,7 +92,7 @@ public final class TcpClient extends Observable implements Runnable , Transmitte
 	}
 
 	public void join( ) throws InterruptedException {
-		if ( Thread.currentThread( ).getId( ) != thread.getId( ) ) {
+		if ( Thread.currentThread() != thread ) {
 			thread.join( );
 		}
 	}
@@ -130,10 +129,8 @@ public final class TcpClient extends Observable implements Runnable , Transmitte
 		m.put( "socket-address" , channel.socket( ).getInetAddress( ).getHostAddress( ) );
 		m.put( "socket-port" , channel.socket( ).getPort( ) );
 		m.put( "local-port" , channel.socket( ).getLocalPort( ) );
-		setChanged( );
-		notifyObservers( m );
-
-	}
+		notifyObservers(m );
+}
 
 	public boolean isConnected( ) {
 		return connected.get( );
@@ -190,7 +187,7 @@ public final class TcpClient extends Observable implements Runnable , Transmitte
 				writeBuffer.compact( );
 			}
 
-			if ( Thread.currentThread( ).getId( ) != thread.getId( ) ) {
+			if ( Thread.currentThread() != thread ) {
 				while ( writeBuffer.remaining( ) < buffer.remaining( ) ) {
 					writeBuffer.wait( );
 				}
