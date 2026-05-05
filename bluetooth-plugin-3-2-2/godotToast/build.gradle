@@ -12,12 +12,6 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
     }
-    libraryVariants.all { variant ->
-        variant.outputs.all { output ->
-            output.outputFileName = "GodotToast.aar"
-        }
-    }
-
     buildTypes {
         release {
             minifyEnabled false
@@ -27,6 +21,12 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+tasks.configureEach { task ->
+    if (task.name == "bundleReleaseAar" && task.hasProperty("archiveFileName")) {
+        task.archiveFileName.set("GodotToast.aar")
     }
 }
 

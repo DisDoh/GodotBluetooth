@@ -161,25 +161,6 @@ public class GodotBlueTooth extends GodotPlugin {
         return localBluetooth != null && hasBluetoothConnectPermission();
     }
 
-    private void connectSocketAsync(final String macAddress, final long delayMs, final Runnable onConnected) {
-        Thread connectThread = new Thread(() -> {
-            if (delayMs > 0) {
-                try {
-                    Thread.sleep(delayMs);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return;
-                }
-            }
-
-            BluetoothSocket connectedSocket = createSocket(macAddress);
-            if (connectedSocket != null && connectedSocket.isConnected() && onConnected != null) {
-                onConnected.run();
-            }
-        }, "GodotBluetoothConnect");
-        connectThread.start();
-    }
-
     @NonNull
     @Override
     public String getPluginName() {
@@ -435,13 +416,15 @@ public class GodotBlueTooth extends GodotPlugin {
                                                 Log.e(TAG, "ERROR: \n" + e);
                                             }
                                         }
-                                        connectSocketAsync(String.valueOf(m.get(3)), 1000, () -> {
-                                            scatternetSocket = socket;
+                                        Handler handler = new Handler(Looper.getMainLooper());
+                                        handler.postDelayed(() -> {
+                                            scatternetSocket = createSocket(String.valueOf(m.get(3)));
                                             imInTheScatternet = true;
                                             connected = true;
                                             imConnecting = false;
                                             Log.e(TAG, "Connected to a Bridge of Scatternet " + m.get(3));
-                                        });
+
+                                        }, 1000);
                                     }
                                     if (String.valueOf(m.get(2)).equals("Emit Signal On connected")) {
 //                                        if (!emitedSignalConnected) {
@@ -709,23 +692,29 @@ public class GodotBlueTooth extends GodotPlugin {
     @UsedByGodot
     public void connect(final int newExternalDeviceID) {
         if (initialized && pairedDevicesListed) {
-            if (!connected) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                        && ContextCompat.checkSelfPermission(activity, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                    emitSignal("on_request_not_granted");
-                    return;
-                }
-                BluetoothDevice device = (BluetoothDevice) pairedDevicesAvailable[newExternalDeviceID];
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (!connected) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                                && ContextCompat.checkSelfPermission(activity, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                            emitSignal("on_request_not_granted");
+                            return;
+                        }
+                        BluetoothDevice device = (BluetoothDevice) pairedDevicesAvailable[newExternalDeviceID];
 
-                macAdress = device.getAddress();
-                serverBluetoothName = device.getName();
-                serverBluetoothAddress = device.getAddress();
+                        macAdress = device.getAddress();
+                        serverBluetoothName = device.getName();
+                        serverBluetoothAddress = device.getAddress();
 
-                connectSocketAsync(macAdress, 0, () -> connected = true);
-            }
+                        createSocket(macAdress);
+                        connected = true;
+                    }
 //                        else{
 //                            resetConnection();
 //                        }
+                }
+            });
         } else {
             //Log.e(TAG, "ERROR: Module Wasn't Initialized!");
         }
@@ -898,13 +887,7 @@ public class GodotBlueTooth extends GodotPlugin {
      */
 
     private BluetoothSocket createSocket (String MAC) {
-        if (localBluetooth == null) {
-            emitSignal("on_request_not_granted");
-            connected = false;
-            return null;
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                && ContextCompat.checkSelfPermission(activity, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+        if (!hasBluetoothAdapterAccess()) {
             emitSignal("on_request_not_granted");
             connected = false;
             return null;
@@ -943,7 +926,7 @@ public class GodotBlueTooth extends GodotPlugin {
             //Log.e(TAG, "Connected With " + serverBluetoothName);
         }
 
-        catch (IOException | SecurityException e) {
+        catch (IOException e) {
             pairedDevicesListed = false;
             connected = false;
             emitSignal("on_connected_error");
@@ -1305,7 +1288,7 @@ public class GodotBlueTooth extends GodotPlugin {
                         cThreadServer.start();
                         socketConnections.put(socketServer.getRemoteDevice().getAddress(), socketServer);
 
-                        if (countConnectedToServerOrABridge >= 4)
+                        if (countConnectedToServerOrABridge >= 0)
                         {
                             scatternetConnections.put(socketServer.getRemoteDevice().getAddress(), cThreadServer);
                             if (scatternetConnections.size() == 1)
@@ -1586,12 +1569,16 @@ public class GodotBlueTooth extends GodotPlugin {
                         mustNotDeconnect = true;
                         mustResetVars = true;
                         resetConnection();
-                        connectSocketAsync(serverBluetoothAddress, wait_time2, () -> {
+                        Handler handler2 = new Handler(Looper.getMainLooper());
+                        handler2.postDelayed(() -> {
+                            createSocket(serverBluetoothAddress);
+                            //emitSignal("
+                            // ", serverBluetoothName, serverBluetoothAddress);
                             connected = true;
                             imInTheScatternet = false;
                             imABridge = false;
                             imConnecting = true;
-                        });
+                        }, wait_time2);
                     }
                     break;
                 }

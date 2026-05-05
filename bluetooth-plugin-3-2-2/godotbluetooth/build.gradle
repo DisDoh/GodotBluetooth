@@ -1,7 +1,7 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 36
+    compileSdkVersion 35
 
     packagingOptions {
         jniLibs {
@@ -27,12 +27,6 @@ android {
         consumerProguardFiles 'consumer-rules.pro'
     }
 
-    libraryVariants.configureEach { variant ->
-        variant.outputs.configureEach { output ->
-            output.outputFileName = "GodotBlueTooth.aar"
-        }
-    }
-
     buildTypes {
         release {
             minifyEnabled false
@@ -42,6 +36,12 @@ android {
     namespace = 'disd.godot.plugin.android.godotbluetooth'
 
 
+}
+
+tasks.configureEach { task ->
+    if (task.name == "bundleReleaseAar" && task.hasProperty("archiveFileName")) {
+        task.archiveFileName.set("GodotBlueTooth.aar")
+    }
 }
 
 dependencies {

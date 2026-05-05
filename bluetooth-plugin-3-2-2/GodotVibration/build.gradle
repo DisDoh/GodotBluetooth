@@ -25,12 +25,6 @@ android {
         consumerProguardFiles 'consumer-rules.pro'
     }
 
-    libraryVariants.configureEach { variant ->
-        variant.outputs.all { output ->
-            output.outputFileName = "GodotVibration.aar"
-        }
-    }
-
     buildTypes {
         release {
             minifyEnabled false
@@ -39,6 +33,12 @@ android {
     }
     namespace = 'org.godotengine.godotvibration'
 
+}
+
+tasks.configureEach { task ->
+    if (task.name == "bundleReleaseAar" && task.hasProperty("archiveFileName")) {
+        task.archiveFileName.set("GodotVibration.aar")
+    }
 }
 
 dependencies {

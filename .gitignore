@@ -1,0 +1,65 @@
+# Gradle
+.gradle/
+build/
+*/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Local config
+local.properties
+*.properties.local
+
+# Android generated files
+captures/
+.externalNativeBuild/
+.cxx/
+obj/
+gen/
+bin/
+
+# APK / AAB outputs
+*.apk
+*.ap_
+*.aab
+
+# Native build outputs
+*.so
+*.dylib
+*.dll
+*.o
+*.a
+
+# Keystores / signing
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Kotlin / Java temp
+*.class
+
+# Google services / secrets
+google-services.json
+secrets.properties
+
+# Godot / Android plugin optional
+.godot/
+.import/
+export_presets.cfg
+
+# Python scripts cache if you use patch scripts
+__pycache__/
+*.pyc

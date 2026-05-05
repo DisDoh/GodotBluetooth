@@ -25,12 +25,6 @@ android {
         consumerProguardFiles 'consumer-rules.pro'
     }
 
-    libraryVariants.configureEach { variant ->
-        variant.outputs.all { output ->
-            output.outputFileName = "GodotNFC.aar"
-        }
-    }
-
     buildTypes {
         release {
             minifyEnabled false
@@ -39,6 +33,12 @@ android {
     }
     namespace = 'ch.disd.godotnfc'
 
+}
+
+tasks.configureEach { task ->
+    if (task.name == "bundleReleaseAar" && task.hasProperty("archiveFileName")) {
+        task.archiveFileName.set("GodotNFC.aar")
+    }
 }
 
 dependencies {

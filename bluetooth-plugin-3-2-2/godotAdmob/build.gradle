@@ -13,12 +13,6 @@ android {
         consumerProguardFiles 'consumer-rules.pro'
     }
 
-    libraryVariants.all { variant ->
-        variant.outputs.all { output ->
-            output.outputFileName = "GodotAdMob.aar"
-        }
-    }
-
     buildTypes {
         release {
             minifyEnabled false
@@ -27,6 +21,12 @@ android {
     }
     namespace = 'disd.godot.plugin.android.godotAdMob'
 
+}
+
+tasks.configureEach { task ->
+    if (task.name == "bundleReleaseAar" && task.hasProperty("archiveFileName")) {
+        task.archiveFileName.set("GodotAdMob.aar")
+    }
 }
 
 dependencies {
